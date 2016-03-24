@@ -1,3 +1,4 @@
 *.tab
 *.fastq
 *.sra
+.snakemake
