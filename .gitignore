@@ -1,4 +1,7 @@
 *.tab
 *.fastq
 *.sra
+
+*.sqlite
+
 .snakemake

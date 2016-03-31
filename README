@@ -12,9 +12,9 @@ pip3 install snakemake
 ## Introduction
 
 
-Do the orphan genes cluster in their own little networks? If so, is this
-an artifact of promoters from similar sources? For example, were they all
-animated by insertions by the same type of telomere?
+Do the orphan genes cluster in their own little networks? If so, are these
+functional clusters or artifacts of common origin? For example, were they
+all animated by insertions by the same type of telomere?
 
 1. Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
    RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
@@ -24,11 +24,13 @@ animated by insertions by the same type of telomere?
 
 1. Compare to interaction network data, using IntAct
 
-1. Compare to promoter motif set similarity
+1. Compare to promoter motif set similarity. How to do this? Retrieve
+   putative set of discrete regulatory elements (one exists for
+   Arabidopsis), Draw edges between genes if there share a common element.
+   Weights are relative to the number of shared elements. This is not the
+   only way to do it, but it may work.
 
-1. Compare genomic distance network 
-
-1. Check for GO term enrichment (probably a dead end)
+1. Compare genomic distance network.
 
 Questions:
 
@@ -69,7 +71,8 @@ similarities, thus drawing the cluster together.
 
 Orphan problems:
 
-    Generally GO is not an option. There are only a few orphans that even have GO terms.
+    Generally GO is not an option. There are only a few orphans that even have
+    GO terms.
 
     Generally, evolutionary methods are not available.
 
