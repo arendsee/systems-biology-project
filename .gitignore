@@ -3,5 +3,10 @@
 *.sra
 
 *.sqlite
+*.index
 
 .snakemake
+.~lock.runs.csv#
+
+old/
+output/
