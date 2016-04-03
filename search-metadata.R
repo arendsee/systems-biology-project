@@ -26,19 +26,23 @@ fetch <- function(fields, table, condition, limit){
   dbGetQuery(sra_con, cmd)
 }
 
+# taxon_id:3702 library_strategy:RNA library_source:TRANSCRIPTOMIC library_layout:PAIRED
+
 fetch("abstract", "study", "taxon_id = 3702", 5)
 
-fetch(
-  fields    = "study_title",
-  table     = "sra_ft", 
-  limit     = 5,
-  condition = c(
-    "taxon_id = '3702'",
-    "library_strategy = 'RNA-Seq'",
-    "library_source = 'TRANSCRIPTOMIC'",
-    "library_layout = 'PAIRED'"
-  )
-)
+# fetch(
+#   fields    = "study_title",
+#   table     = "sra_ft", 
+#   limit     = 5,
+#   condition = c(
+#     "taxon_id = '3702'",
+#     "library_strategy = 'RNA-Seq'",
+#     "library_source = 'TRANSCRIPTOMIC'",
+#     "library_layout = 'PAIRED'"
+#   )
+# )
+
+
 
 # Take all TAIR10 models
 
