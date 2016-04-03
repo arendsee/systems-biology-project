@@ -94,4 +94,4 @@ mv $kallisto_outdir/abundance.h5  $outdir/results/${runid}.h5
 mv $kallisto_outdir/run_info.json $outdir/results/${runid}.json
 
 # Remove fastq files
-[[ $clean -eq 1 ]] && rm $
+[[ $clean -eq 1 ]] && rm -rf $kallisto_outdir $outdir/${runid}.fastq*
