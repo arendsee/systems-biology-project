@@ -51,7 +51,7 @@ then
     trans="$trans_idx"
 fi
 
-prefetch             \
+time prefetch        \
     --max-size 100G  \
     --transport ascp \
     --ascp-path "/opt/aspera/bin/ascp|/opt/aspera/etc/asperaweb_id_dsa.openssh" \
@@ -81,8 +81,8 @@ time fastq-dump        \
 
 # align reads to transcriptome index
 kallisto_outdir=${outdir}/${runid}-bootstrap
-kallisto quant                      \
-    --index="$trans"        \
+time kallisto quant                 \
+    --index="$trans"                \
     --bootstrap-samples=100         \
     --output-dir="$kallisto_outdir" \
     --threads=$nthreads             \
@@ -94,4 +94,4 @@ mv $kallisto_outdir/abundance.h5  $outdir/results/${runid}.h5
 mv $kallisto_outdir/run_info.json $outdir/results/${runid}.json
 
 # Remove fastq files
-[[ $clean -eq 1 ]] && rm -rf $kallisto_outdir $outdir/${runid}.fastq*
+[[ $clean -eq 1 ]] && rm -rf $outdir/${runid}*
