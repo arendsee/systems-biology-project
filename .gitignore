@@ -11,5 +11,7 @@
 *.bck
 *.dsc
 
+*log
+
 old/
 output/
