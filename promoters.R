@@ -3,20 +3,32 @@ require(magrittr)
 require(igraph)
 require(reshape2)
 require(tidyr)
-require(bigmemory)
-require(bigalgebra)
-require(bigpca)
 
-
-d <- read.table("tf-counts.tab")
+d <- read.table("data/tf-counts.tab")
 names(d) <- c('model', 'tf', 'count')
+
+adj2net <- function(adjmatrix, ...){
+    graph_from_adjacency_matrix(adjmatrix, mode="undirected", diag=FALSE, ...)
+}
+# Return only the largest connected component
+largest_component <- function(x){
+    components(x) %$%
+        which(membership != which.max(csize)) %>%
+        delete_vertices(graph=x)
+}
+# Remove components of size less than or equal to k
+prune <- function(g, k=1){
+    components(g) %$%
+        which(membership %in% which(csize <= k)) %>%
+        delete_vertices(graph=g)
+}
 
 nrow(d)
 nlevels(d$tf)
 
-nd <- as.character(d$tf) %>% count
 hist(nd$freq, breaks=20)
 
+  nd <- as.character(d$tf) %>% count
   uncommon <- subset(nd, freq < 10000) %$% as.character(x)
 
   d <- d[d$tf %in% uncommon, ] %>% droplevels
@@ -24,11 +36,21 @@ hist(nd$freq, breaks=20)
   nrow(d)
   nlevels(d$tf)
 
-m  <- acast(d, model ~ tf, sum, fill=0) > 0
-mt <- t(m)
-mt <- as.big.matrix(mt)
-m  <- as.big.matrix(m)
-b  <- m %*% mt
+m  <- acast(d, model ~ tf, sum, fill=0)
+tf.cor <- cor(m, method="spearson")
+par(mfrow=c(1,1), mar=c(0,0,0,0))
+adj2net(tf.cor > 0.7) %>%
+  # plot(vertex.size=1)
+  plot(vertex.label=NA, vertex.size=1)
+
+m.sam <- m[sample.int(nrow(m), 10000), ]
+
+gen.cor <- cor(t(m.sam), method="spearman")
+par(mfrow=c(1,1), mar=c(0,0,0,0))
+adj2net(gen.cor > 0.8) %>%
+  prune(k=2) %>%
+  plot(vertex.label=NA, vertex.size=1)
+  # plot(vertex.size=1)
 
 # m <- as.matrix(d[c(1,2)]) %>%
 #   graph_from_edgelist(directed=FALSE) %>%
