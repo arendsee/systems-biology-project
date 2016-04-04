@@ -79,3 +79,22 @@ Orphan problems:
     There is a few added layer of uncertainty: the orphans may not actually
     express a functional (whatever that means) protein product. They may be
     noise.
+
+
+# Selection of runs
+ 
+From the selected studies, I removed any runs that
+
+ 1. Where not contentional transcriptomic (for example, bisulfite sequencing)
+ 1. Where not from Col-0 *A. thaliana*
+
+# Data
+
+bindingsite-data.tbl - experimentally confirmed [TF-binding
+sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
+Agris.
+
+orphans - an in-house list of orphan TAIR10 model ids.
+
+at.fa - CDS for arabidopsis models (retrieved from the Kallisto website, and
+they got it from Ensembl)
