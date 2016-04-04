@@ -8,5 +8,8 @@
 .snakemake
 .~lock.runs.csv#
 
+*.bck
+*.dsc
+
 old/
 output/
