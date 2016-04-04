@@ -85,6 +85,9 @@ time kallisto quant                 \
     --index="$trans"                \
     --bootstrap-samples=100         \
     --output-dir="$kallisto_outdir" \
+    --single                        \
+    --fragment-length=200           \
+    --sd=20                         \
     --threads=$nthreads             \
     $outdir/${runid}_*
 
