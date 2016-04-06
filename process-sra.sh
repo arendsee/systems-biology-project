@@ -81,15 +81,28 @@ time fastq-dump        \
 
 # align reads to transcriptome index
 kallisto_outdir=${outdir}/${runid}-bootstrap
-time kallisto quant                 \
-    --index="$trans"                \
-    --bootstrap-samples=100         \
-    --output-dir="$kallisto_outdir" \
-    --single                        \
-    --fragment-length=200           \
-    --sd=20                         \
-    --threads=$nthreads             \
-    $outdir/${runid}_*
+
+if [[ -f ${runid}_2.sra ]]
+then
+    # paired end reads
+    time kallisto quant                 \
+        --index="$trans"                \
+        --bootstrap-samples=100         \
+        --output-dir="$kallisto_outdir" \
+        --threads=$nthreads             \
+        $outdir/${runid}_*
+else
+    # single reads
+    time kallisto quant                 \
+        --index="$trans"                \
+        --bootstrap-samples=100         \
+        --output-dir="$kallisto_outdir" \
+        --single                        \
+        --fragment-length=200           \
+        --sd=20                         \
+        --threads=$nthreads             \
+        $outdir/${runid}_*
+fi
 
 # move results and run details into results folder
 mv $kallisto_outdir/abundance.tsv $outdir/results/${runid}.tsv
