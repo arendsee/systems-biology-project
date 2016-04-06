@@ -12,6 +12,9 @@
 
 \begin{document}
 
+\section{Abstract}
+\label{sec:abstract}
+
 \section{Introduction}
 \label{sec:introduction}
 
@@ -39,37 +42,59 @@ Do the orphan genes cluster in their own little networks? If so, are these
 functional clusters or artifacts of common origin? For example, were they
 all animated by insertions by the same type of telomere?
 
-1. Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
+\section{Background}
+\label{sec:background}
+
+Orphan problems:
+
+    Generally GO is not an option. There are only a few orphans that even have
+    GO terms.
+
+    Generally, evolutionary methods are not available.
+
+    There is a few added layer of uncertainty: the orphans may not actually
+    express a functional (whatever that means) protein product. They may be
+    noise.
+
+Unfortunately, the exprimental structures of RNA-seq data are not encoded in
+the SRA metadata.
+
+\section{Methods}
+\label{sec:methods}
+
+\begin{enumerate}
+  \item Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
    RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
    bootstrapping procedure.
-
-1. Use snakefile to organize run
-
-1. Compare to interaction network data, using IntAct
-
-1. Compare to promoter motif set similarity. How to do this? Retrieve
+  \item Use snakefile to organize run
+  \item Compare to interaction network data, using IntAct
+  \item Compare to promoter motif set similarity. How to do this? Retrieve
    putative set of discrete regulatory elements (one exists for
    Arabidopsis), Draw edges between genes if there share a common element.
    Weights are relative to the number of shared elements. This is not the
    only way to do it, but it may work.
+  \item Compare genomic distance network.
+\end{enumerate}
 
-1. Compare genomic distance network.
+\section{Questions}
+\label{sec:questions}
 
-Questions:
-
-1. Do the orphans cluster together in expression?
-
-1. If so, do they cluster more than I would expect?
-
-1. Take the largest or most interesting cluster
-
-    1. Do they share more interactions than I would expect? If so, this is
+\begin{enumerate}
+  \item Do the orphans cluster together in expression?
+  \item If so, do they cluster more than I would expect?
+  \item Take the largest or most interesting cluster
+  \begin{enumerate}
+    \item  Do they share more interactions than I would expect? If so, this is
        evidence that the expression clustering has some basis in protein
        function, rather than chance.
-    
-    1. Do they share a common, simple promoter motif?
+    \item Do they share a common, simple promoter motif?
+    \item Do they share a common upstream promoter?
+  \end{enumerate}
+\end{enumerate}
 
-    1. Do they share a common upstream promoter?
+
+\section{Conclustions}
+\label{sec:conclustions}
 
 Naive hypothesis:
 
@@ -91,37 +116,63 @@ Perhaps, because they are coexpressed originally, and since they therefore
 have the chance to interact, selection will work to enhance the
 similarities, thus drawing the cluster together.
 
+\section{Data}
+\label{sec:data}
 
-Orphan problems:
+\subsection{Selection of runs}
+\label{sub:selection_of_runs}
 
-    Generally GO is not an option. There are only a few orphans that even have
-    GO terms.
-
-    Generally, evolutionary methods are not available.
-
-    There is a few added layer of uncertainty: the orphans may not actually
-    express a functional (whatever that means) protein product. They may be
-    noise.
-
-# Selection of runs
- 
 From the selected studies, I removed any runs that
 
  1. Where not contentional transcriptomic (for example, bisulfite sequencing)
  1. Where not from Col-0 *A. thaliana*
 
-\section{Data}
-\label{sec:data}
 
 \begin{description}
   \item[ERP004034] inflorecence meristem, floral meristem and flower 
   \item[ERP005391] three developmental stages of somatic embryo development
   \item[SRP003864] copper defficiency (WT and spl7-KO) X (normal, low [Cu])
+
+      Deleted spl7 mutants
+
   \item[SRP007113] female gametophyte
   \item[SRP009369] root hair 
   \item[SRP010642] brassinosteroid and gibberillin treatments, 
+  \begin{description}
+    \item[PAC-PPZ] negative for both the GA and BR hormones
+    \item[PAC-GA]  negative for BR
+    \item[PAC]     negative for GA
+  \end{description}
+      Deleted both bzr1 mutants and the PAC-GA runs (the controls)
 
+  \item[SRP018404] root response to nitrate
+
+      Deleted the sRNA runs
+
+  \item[SRP027256] drought condition versus WT
+
+      Deleted the GI mutants
+
+  \item[SRP034715] Response to mildew (huge)
+
+      Deleted the water control and the avirulent Emoy2 infected runs.
+
+  \item[SRP035269] seed development (3 lines) X (3 dev stages) X (3 bioreps)
+
+      Deleted lines CL37 and PDAT\_7, keeping only Fae 
+
+  \item[SRP044814] Fe stress
+  \item[SRP063017] Nematode infection
+
+      Deleted cytokine hypersensitive type-A lines, 
 \end{description}
+
+SRP051665 is interesting in that it attempted to study the translatome by
+extracting mRNAs from polyribosomes.
+
+Honorable mentions, SRP032274 also uses PPZ to stop BR hormongering. SRP032366
+heat stress, 38C for 15 minutes, deleted for lack of biological replicates.
+
 
 bindingsite-data.tbl - experimentally confirmed [TF-binding
 sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
@@ -131,5 +182,21 @@ orphans - an in-house list of orphan TAIR10 model ids.
 
 at.fa - CDS for arabidopsis models (retrieved from the Kallisto website, and
 they got it from Ensembl)
+
+\section{Overview}
+\label{sec:todo}
+
+\begin{enumerate}
+  \item Take all TAIR10 models
+  \item Merge genes with identical coding sequences
+  \item Build kallisto index with these genes
+  \item Select set of interesting Arabidopsis studies
+  \begin{itemize}
+      \item want wide variety of conditions
+      \item use SRAdb to get list of runids
+      \item for each, fetch | fastq-dump | kallisto
+  \end{itemize}
+  \item In Sleuth, normalize all the studies merge into final expression table
+\end{enumerate}
 
 \end{document}

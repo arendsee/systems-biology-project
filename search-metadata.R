@@ -26,7 +26,7 @@ fetch <- function(fields, table, condition, limit){
   dbGetQuery(conn=sra_con, statement=cmd)
 }
 
-stuid = c(
+stuid1 = c(
   'SRP009850', # shoot apical meristems stages
   'SRP018034', # leaf senesence stages
   'SRP053394', # hi/lo temp
@@ -43,6 +43,26 @@ stuid2 = c(
   'SRP036643'  # (160 Swedish accession) X (10C, 16C)
 )
 
+stuid3 = c(
+  # Developmental stages
+  'ERP004034', # inflorecence meristem, floral meristem and flower 
+  'ERP005391', # PAIRED: three stages of somatic embryo development
+  'SRP007113', # female gametophyte
+  'SRP009369', # PAIRED: root hair 
+  'SRP035269', # seed development (3 lines) X (3 dev stages) X (3 bioreps)
+  # hormone perturbations
+  'SRP010642', # brassinosteroid and gibberillin treatments, 
+  # abiotic stresses
+  'SRP018404', # root response to nitrate
+  'SRP003864', # copper defficiency (WT and spl7-KO) X (normal, low [Cu])
+  'SRP027256', # drought condition versus WT
+  'SRP044814', # Fe stress
+  # biotic stress
+  'SRP034715', # Response to mildew (huge)
+  'SRP063017'  # Nematode infection
+)
+
+
 fjoin <- function(x) sprintf("'%s'", paste0(x, collapse="', '"))
 
 getRuns <- function(s){
@@ -51,12 +71,35 @@ getRuns <- function(s){
     query()
 }
 
-runs  <- getRuns(stuid)[c()]
+runs1 <- getRuns(stuid1)
 runs2 <- getRuns(stuid2)
+runs3 <- getRuns(stuid3)
 
+out <- runs3[c(
+  'run_accession',
+  'experiment_accession',
+  'sample_accession',
+  'submission_accession',
+  'study_accession',
+  'sample_name',
+  'sample_alias',
+  'experiment_name',
+  'experiment_alias',
+  'experiment_title',
+  'library_layout',
+  'platform',
+  'library_strategy',
+  'library_selection',
+  'study_name',
+  'study_title',
+  'study_abstract',
+  'study_type',
+  'study_description'
+)]
+write.table(out, file='z.tab', quote=F, sep="\t", row.names=F)
+write.table(runs3, file='zfull.tab', quote=F, sep="\t", row.names=F)
 
 # taxon_id:3702 library_strategy:RNA library_source:TRANSCRIPTOMIC library_layout:PAIRED
-
 
 # fetch(
 #   fields    = "study_title",
@@ -69,23 +112,3 @@ runs2 <- getRuns(stuid2)
 #     "library_layout = 'PAIRED'"
 #   )
 # )
-
-
-
-# Take all TAIR10 models
-
-# Merge genes with identical coding sequences
-
-# Build kallisto index with these genes
-
-# Select set of interesting Arabidopsis studies
-# - want wide variety of conditions
-# - use SRAdb to get list of runids
-
-# For each, fetch | fastq-dump | kallisto
-
-# ---------
-
-# In Sleuth, normalize all the studies
-# merge into final expression table
-# 
