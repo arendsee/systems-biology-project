@@ -13,5 +13,12 @@
 
 *log
 
+*.aux
+*.fdb_latexmk
+*.fls
+*.pdf
+*.tex
+*~*
+
 old/
 output/
