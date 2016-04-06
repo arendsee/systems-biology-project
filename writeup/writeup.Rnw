@@ -110,7 +110,18 @@ From the selected studies, I removed any runs that
  1. Where not contentional transcriptomic (for example, bisulfite sequencing)
  1. Where not from Col-0 *A. thaliana*
 
-# Data
+\section{Data}
+\label{sec:data}
+
+\begin{description}
+  \item[ERP004034] inflorecence meristem, floral meristem and flower 
+  \item[ERP005391] three developmental stages of somatic embryo development
+  \item[SRP003864] copper defficiency (WT and spl7-KO) X (normal, low [Cu])
+  \item[SRP007113] female gametophyte
+  \item[SRP009369] root hair 
+  \item[SRP010642] brassinosteroid and gibberillin treatments, 
+
+\end{description}
 
 bindingsite-data.tbl - experimentally confirmed [TF-binding
 sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
