@@ -1,10 +1,15 @@
-TARGET=writeup
+TARGET=report
 
-${TARGET}.pdf: ${TARGET}.Rnw
+${TARGET}.pdf: ${TARGET}.Rnw ${TARGET}.bib
 	Rscript -e "library(knitr); knit('${TARGET}.Rnw')"
-	latexmk -pdf ${TARGET}.tex
+	latexmk -bibtex -pdf ${TARGET}.tex
 
 .PHONY: clean
 clean:
-	latexmk -c ${TARGET}.tex
-	rm -rf cache ${TARGET}.tex
+	latexmk -f -c ${TARGET}.tex
+	rm -rf cache ${TARGET}.tex ${TARGET}.bbl
+
+.PHONY: deep-clean
+deep-clean:
+	latexmk -f -c ${TARGET}.tex
+	rm -rf cache ${TARGET}.tex ${TARGET}.bbl ${TARGET}.pdf

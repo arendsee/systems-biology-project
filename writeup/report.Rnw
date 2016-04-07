@@ -5,6 +5,15 @@
 \usepackage{amsmath}
 \usepackage{enumerate}
 \usepackage{placeins}
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=blue,
+    filecolor=blue,
+    linkcolor=blue,
+    urlcolor=blue
+}
 \setlength{\parskip}{3mm}
 \pagestyle{fancy}
 \lhead{Final Project \hspace{3mm}  BCB570  \hspace{3mm} Spring \hspace{3mm} Due May 6}
@@ -15,8 +24,66 @@
 \section{Abstract}
 \label{sec:abstract}
 
-\section{Introduction}
-\label{sec:introduction}
+It is now well accepted that novel genes can arise de novo from non-genic
+material. However, little is known about the regulational circuitry of these
+young genes. A few studies have searched for regulatory motifs in the orphan
+promoters, but prediction of functional binding sites, especially for
+transcription factors with very small sites, it not reliable. Here I will test
+an alternative solution consisting of 1) prediction of transcription factor
+(TF) that regulate each gene, 2) comparing the result to sequence-based binding
+site predictions, and 3) testing how well co-expression networks agree.
+
+My hypothesis is that orphan genes will tend to be directly regulated by only a
+few transcription factors with relatively simple binding sites.
+
+\section{Background}
+\label{sec:background}
+
+\begin{enumerate}
+  \item Take all TAIR10 models
+  \item Merge genes with identical coding sequences
+  \item Build kallisto index with these genes
+  \item Select set of interesting Arabidopsis studies
+  \begin{itemize}
+      \item want wide variety of conditions
+      \item use SRAdb to get list of runids
+      \item for each, fetch | fastq-dump | kallisto
+  \end{itemize}
+  \item In Sleuth, normalize all the studies merge into final expression table
+\end{enumerate}
+
+\begin{enumerate}
+  \item Do the orphans cluster together in expression?
+  \item If so, do they cluster more than I would expect?
+  \item Take the largest or most interesting cluster
+  \begin{enumerate}
+    \item  Do they share more interactions than I would expect? If so, this is
+       evidence that the expression clustering has some basis in protein
+       function, rather than chance.
+    \item Do they share a common, simple promoter motif?
+    \item Do they share a common upstream promoter?
+  \end{enumerate}
+\end{enumerate}
+
+Naive hypothesis:
+
+If the genes are co-expressed they must be part of the same functional
+pathway. Expression is driven by selection.
+
+Other possibilities:
+
+They share a common origin. Expression is neutral. The co-expression
+predates any shared functionality.
+
+Story 1: A transposon proliferation provided the promoter machinery that
+animated the non-genic precursor of the orphan.
+
+Story 2: If the promoter is completely de novo, the most likely regulatory
+motifs to have arisen are the shortest, most simple ones.
+
+Perhaps, because they are coexpressed originally, and since they therefore
+have the chance to interact, selection will work to enhance the
+similarities, thus drawing the cluster together.
 
 I want to know about the promoters motifs that are being used by the
 orphan genes. However, predicting functional binding sites de novo is
@@ -42,9 +109,6 @@ Do the orphan genes cluster in their own little networks? If so, are these
 functional clusters or artifacts of common origin? For example, were they
 all animated by insertions by the same type of telomere?
 
-\section{Background}
-\label{sec:background}
-
 Orphan problems:
 
     Generally GO is not an option. There are only a few orphans that even have
@@ -62,6 +126,9 @@ the SRA metadata.
 \section{Methods}
 \label{sec:methods}
 
+\subsection{Collecting RNA-seq data}
+\label{sub:collecting_rna_seq_data}
+
 \begin{enumerate}
   \item Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
    RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
@@ -75,52 +142,6 @@ the SRA metadata.
    only way to do it, but it may work.
   \item Compare genomic distance network.
 \end{enumerate}
-
-\section{Questions}
-\label{sec:questions}
-
-\begin{enumerate}
-  \item Do the orphans cluster together in expression?
-  \item If so, do they cluster more than I would expect?
-  \item Take the largest or most interesting cluster
-  \begin{enumerate}
-    \item  Do they share more interactions than I would expect? If so, this is
-       evidence that the expression clustering has some basis in protein
-       function, rather than chance.
-    \item Do they share a common, simple promoter motif?
-    \item Do they share a common upstream promoter?
-  \end{enumerate}
-\end{enumerate}
-
-
-\section{Conclustions}
-\label{sec:conclustions}
-
-Naive hypothesis:
-
-If the genes are co-expressed they must be part of the same functional
-pathway. Expression is driven by selection.
-
-Other possibilities:
-
-They share a common origin. Expression is neutral. The co-expression
-predates any shared functionality.
-
-Story 1: A transposon proliferation provided the promoter machinery that
-animated the non-genic precursor of the orphan.
-
-Story 2: If the promoter is completely de novo, the most likely regulatory
-motifs to have arisen are the shortest, most simple ones.
-
-Perhaps, because they are coexpressed originally, and since they therefore
-have the chance to interact, selection will work to enhance the
-similarities, thus drawing the cluster together.
-
-\section{Data}
-\label{sec:data}
-
-\subsection{Selection of runs}
-\label{sub:selection_of_runs}
 
 From the selected studies, I removed any runs that
 
@@ -173,30 +194,47 @@ extracting mRNAs from polyribosomes.
 Honorable mentions, SRP032274 also uses PPZ to stop BR hormongering. SRP032366
 heat stress, 38C for 15 minutes, deleted for lack of biological replicates.
 
+\subsection{Quantify transcript expression}
+\label{sub:quantify_transcript_expression}
+
+For expression quantification we are using a new tool, Kallisto, which is
+a few orders of magnitude faster than the conventional Bowtie and
+Cufflinks approach. Kallisto is so fast, and so easily parallizeable, that
+the bottleneck in the pipeline is data retrieval.
+
+Kallisto is a very fast tool for quantitative analysis of transcriptome
+expression \cite{bray_near-optimal_2015}.
+
+at.fa - CDS for arabidopsis models (retrieved from the Kallisto website, and
+they got it from Ensembl)
+
+Then Sleuth
+
+\subsection{Select transcription factor set}
+\label{sub:select_transcription_factor_set}
 
 bindingsite-data.tbl - experimentally confirmed [TF-binding
 sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
 Agris.
 
+\subsection{Orphan annotations}
+\label{sub:orphan_annotations}
+
 orphans - an in-house list of orphan TAIR10 model ids.
 
-at.fa - CDS for arabidopsis models (retrieved from the Kallisto website, and
-they got it from Ensembl)
+\subsection{Predict direct regulators}
+\label{sub:predict_direct_regulators}
 
-\section{Overview}
-\label{sec:todo}
+\subsection{Compare expression predictions to motif predictions}
+\label{sub:compare_expression_predictions_to_motif_predictions}
 
-\begin{enumerate}
-  \item Take all TAIR10 models
-  \item Merge genes with identical coding sequences
-  \item Build kallisto index with these genes
-  \item Select set of interesting Arabidopsis studies
-  \begin{itemize}
-      \item want wide variety of conditions
-      \item use SRAdb to get list of runids
-      \item for each, fetch | fastq-dump | kallisto
-  \end{itemize}
-  \item In Sleuth, normalize all the studies merge into final expression table
-\end{enumerate}
+\subsection{Build full expression matrix}
+\label{sub:build_full_expression_matrix}
+
+\section{Conclusions}
+\label{sec:conclustions}
+
+\bibliographystyle{plain}
+\bibliography{report}
 
 \end{document}
