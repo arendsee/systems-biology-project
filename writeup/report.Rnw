@@ -29,14 +29,26 @@
 It is now well accepted that novel genes can arise de novo from non-genic
 material. However, little is known about the regulational circuitry of these
 young genes. A few studies have searched for regulatory motifs in the orphan
-promoters, but prediction of functional binding sites, especially for
-transcription factors with very small sites, it not reliable. Here I will test
-an alternative solution consisting of 1) prediction of transcription factor
-(TF) that regulate each gene, 2) comparing the result to sequence-based binding
-site predictions, and 3) testing how well co-expression networks agree.
+promoters, but prediction of \textit{functional} binding sites, often having
+only a few bits of information, is not reliable. I will instead 1) use RNA-seq
+data to predict transcription factors (TF) that regulate each gene and 2)
+compare the results to sequence-based binding site predictions.
 
-My hypothesis is that orphan genes will tend to be directly regulated by only a
-few transcription factors with relatively simple binding sites.
+There are several ways an orphan may acquire existing transcriptional codes.
+They may exploit the promoter of an established gene as a secondary open
+reading frame; fall under the paradigm of a transposon that inserts upstream;
+inherit the full regulatory context of a host that has lost its primary gene;
+or emerge as a translational byproduct of a functional long non-coding RNA.
+However, there is also evidence that orphans can arise completely de novo.
+Though it may at first seem unlikely that all the transcriptional and
+translational prerequisites would assemble by chance, given the small amount of
+information required for most signals, and given the number of chances a
+population of genomes across thousands of generations have, chance emergence of
+de novo orphans may not be so uncommon.
+
+Orphan genes of truly de novo origin should be directly regulated by only a few
+transcription factors with simple binding sites. Alternatively, orphans could
+hijack the transcriptional 
 
 \section{Background}
 \label{sec:background}
