@@ -14,6 +14,8 @@
     linkcolor=blue,
     urlcolor=blue
 }
+\usepackage{array}
+\newcolumntype{L}{>{\arraybackslash}m{3cm}}
 \setlength{\parskip}{3mm}
 \pagestyle{fancy}
 \lhead{Final Project \hspace{3mm}  BCB570  \hspace{3mm} Spring \hspace{3mm} Due May 6}
@@ -148,51 +150,47 @@ From the selected studies, I removed any runs that
  1. Where not contentional transcriptomic (for example, bisulfite sequencing)
  1. Where not from Col-0 *A. thaliana*
 
-
-\begin{description}
-  \item[ERP004034] inflorecence meristem, floral meristem and flower 
-  \item[ERP005391] three developmental stages of somatic embryo development
-  \item[SRP003864] copper defficiency (WT and spl7-KO) X (normal, low [Cu])
-
-      Deleted spl7 mutants
-
-  \item[SRP007113] female gametophyte
-  \item[SRP009369] root hair 
-  \item[SRP010642] brassinosteroid and gibberillin treatments, 
-  \begin{description}
-    \item[PAC-PPZ] negative for both the GA and BR hormones
-    \item[PAC-GA]  negative for BR
-    \item[PAC]     negative for GA
-  \end{description}
-      Deleted both bzr1 mutants and the PAC-GA runs (the controls)
-
-  \item[SRP018404] root response to nitrate
-
-      Deleted the sRNA runs
-
-  \item[SRP027256] drought condition versus WT
-
-      Deleted the GI mutants
-
-  \item[SRP034715] Response to mildew (huge)
-
-      Deleted the water control and the avirulent Emoy2 infected runs.
-
-  \item[SRP035269] seed development (3 lines) X (3 dev stages) X (3 bioreps)
-
-      Deleted lines CL37 and PDAT\_7, keeping only Fae 
-
-  \item[SRP044814] Fe stress
-  \item[SRP063017] Nematode infection
-
-      Deleted cytokine hypersensitive type-A lines, 
-\end{description}
-
-SRP051665 is interesting in that it attempted to study the translatome by
-extracting mRNAs from polyribosomes.
-
-Honorable mentions, SRP032274 also uses PPZ to stop BR hormongering. SRP032366
-heat stress, 38C for 15 minutes, deleted for lack of biological replicates.
+\begin{table}[htpb]
+    \centering
+    \caption{Studies used to build the coexpression networks. D means control,
+        BR brassinosteroid, and GA gibberillin.}
+    \label{tab:sra_table}
+    \begin{tabular}{l | L | L | L}
+        accession & description & layout & notes \\
+        \hline
+        ERP004034 & floral development & (inflorecence meristem, floral meristem, flower) & {} \\
+        \hline
+        ERP005391 & somatic embryo development & (three stages) & {} \\
+        \hline
+        SRP003864 & copper defficiency & (normal Cu, low Cu) & Deleted spl7 mutants \\
+        \hline
+        SRP007113 & female gametophyte & {} & \\
+        \hline
+        SRP009369 & root hair & {} & {} \\
+        \hline
+        SRP010642 & hormone treatments & (D, BR-, GA-, BR-GA-) X 2 & Deleted bzr1 mutants \\
+           %PAC-PPZ negative for both the GA and BR hormones
+           %PAC-GA  negative for BR
+           %PAC     negative for GA
+        \hline
+        SRP018404 & root nitrate response & (normal, high) & Deleted the sRNA runs \\
+        \hline
+        SRP027256 & drought & {} & Deleted the GI mutants \\
+        \hline
+        SRP034715 & mildew pathoge & (virulent, avirulent) X 3 & Deleted the water control and the avirulent Emoy2 infected runs \\
+        \hline
+        SRP035269 & seed development & (3 dev stages) X 3 & Deleted lines CL37 and PDAT\_7, keeping only Fae  \\
+        \hline
+        SRP044814 & Fe stress & {} & {} \\
+        \hline
+        SRP063017 & Nematode infection & {} & Deleted cytokine hypersensitive type-A lines \\
+        \hline
+    \end{tabular}
+\end{table}
+% Honorable mentions: 1) SRP051665 is interesting in that it attempted to study
+% the translatome by extracting mRNAs from polyribosomes. 2) SRP032274 also uses
+% PPZ to stop BR hormongering. SRP032366 heat stress, 38C for 15 minutes, deleted
+% for lack of biological replicates.
 
 \subsection{Quantify transcript expression}
 \label{sub:quantify_transcript_expression}
@@ -224,6 +222,16 @@ orphans - an in-house list of orphan TAIR10 model ids.
 
 \subsection{Predict direct regulators}
 \label{sub:predict_direct_regulators}
+
+There are several possible approaches I could use here.
+
+The easiest possibility would be to use ARACNE to trim indirect interactions.
+Any links remaining between the orphan and a transcription factor would be
+assumed to be causal. Although it is possible that the orphan itself is a
+transcription factor.
+
+A possibly more powerful method is a form of intervention calculus that builds
+a DAG from observed data \cite{maathuis} and the pcalg R library.
 
 \subsection{Compare expression predictions to motif predictions}
 \label{sub:compare_expression_predictions_to_motif_predictions}
