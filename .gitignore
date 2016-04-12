@@ -12,13 +12,19 @@
 *.dsc
 
 *log
+*.out
 
 *.aux
 *.fdb_latexmk
 *.fls
 *.pdf
 *.tex
+*.bbl
+*.blg
 *~*
+cache/
 
 old/
 output/
+athamap/
+logos/
