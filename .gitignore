@@ -24,7 +24,10 @@
 *~*
 cache/
 
+motif-reports/*Rnw
+
 old/
 output/
 athamap/
 logos/
+

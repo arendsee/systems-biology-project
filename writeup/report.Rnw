@@ -7,6 +7,7 @@
 \usepackage{placeins}
 \usepackage{color}
 \usepackage{hyperref}
+\usepackage{array}
 \hypersetup{
     colorlinks,
     citecolor=blue,
@@ -14,14 +15,20 @@
     linkcolor=blue,
     urlcolor=blue
 }
-\usepackage{array}
+\usepackage{graphicx}
 \newcolumntype{L}{>{\arraybackslash}m{3cm}}
 \setlength{\parskip}{3mm}
 \pagestyle{fancy}
 \lhead{Final Project \hspace{3mm}  BCB570  \hspace{3mm} Spring \hspace{3mm} Due May 6}
 \rhead{Zebulun Arendsee}
 
+\graphicspath{{images/}}
+
 \begin{document}
+
+
+
+Two vectors are orthogonal if and only if $\boldsymbol{a} \cdot \boldsymbol{b} = 0$
 
 \section{Abstract}
 \label{sec:abstract}
@@ -227,6 +234,9 @@ bindingsite-data.tbl - experimentally confirmed [TF-binding
 sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
 Agris.
 
+I acquired a large list of 2296 TFs (1717 loci) from
+\href{http://planttfdb.cbi.pku.edu.cn/index.php?sp=Ath}[plantTFDB].
+
 \subsection{Orphan annotations}
 \label{sub:orphan_annotations}
 
@@ -247,6 +257,31 @@ a DAG from observed data \cite{maathuis} and the pcalg R library.
 
 \subsection{Compare expression predictions to motif predictions}
 \label{sub:compare_expression_predictions_to_motif_predictions}
+
+<<cache=TRUE>>=
+require(reshape2)
+require(ggplot2)
+require(magrittr)
+require(dplyr)
+d <- read.delim('../data/athamap/LDB16.txt')
+d <- d[, c('Relative.distance', 'Relative.orientation', 'Score')]
+d <- subset(d, as.character(Relative.orientation) %in% c('-', '+')) %>%
+    droplevels
+ggplot(sample_n(d, 5000)) +
+    stat_density2d(
+        aes(x=Relative.distance, y=Score, fill=..density..),
+        geom='tile',
+        contour=FALSE
+    ) +
+    scale_fill_gradientn(colours = rainbow(7)) +
+    facet_wrap(~Relative.orientation)
+@
+
+\begin{figure}[!ht] \centering
+  \includegraphics[width=0.3\textwidth]{ICU4}
+  \caption{ICU4 motif}
+\end{figure}
+
 
 \subsection{Build full expression matrix}
 \label{sub:build_full_expression_matrix}
