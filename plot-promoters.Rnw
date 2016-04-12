@@ -1,0 +1,72 @@
+\documentclass[10pt]{article}
+\usepackage{graphicx}
+\usepackage[left=1cm, top=1cm, bottom=1cm, right=2cm]{geometry}
+\graphicspath{{../data/logos/}}
+
+\begin{document}
+
+\begin{figure}[!ht] \centering
+  \includegraphics[width=0.6\textwidth]{MOTIF_NAME}
+\end{figure}
+
+<<echo=FALSE, message=FALSE, fig.width=8, fig.height=6>>=
+require(reshape2)
+require(ggplot2)
+require(gridExtra)
+d <- read.delim('../data/athamap/MOTIF_NAME.txt')
+d <- droplevels(subset(d, as.character(Relative.orientation) %in% c('-', '+')))
+plotit <- function(d., bottom=TRUE){
+    g <- ggplot(d.) +
+        stat_density2d(
+            aes(x=Relative.distance, y=Score, fill=..density..),
+            geom='tile',
+            contour=FALSE
+        ) +
+        scale_fill_gradientn(colours = rainbow(7)) +
+        facet_wrap(~Relative.orientation) +
+        theme_bw() +
+        theme(
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank(),
+            legend.position="none"
+        )
+    if(bottom){
+        g <- g +
+            theme(strip.background = element_blank(),
+                  strip.text.x = element_blank())
+    } else {
+        g <- g + theme(axis.title.x = element_blank())
+    }
+    g
+}
+g1 <- plotit(d, FALSE)
+g2 <- plotit(subset(d, abs(Relative.distance) < 300), TRUE)
+grid.arrange(g1, g2, nrow=2)
+@
+
+
+<<echo=FALSE>>=
+options(width=as.integer(110))
+s_factor <- d$Factor[1]
+s_family <- d$Family[1]
+s_max_score <- d$Max..Score[1]
+s_thr_score <- d$Threshold.Score[1]
+s_total <- length(unique(d$Gene))
+d <- d[, c(1,5,6,9)]
+names(d) <- c('GeneID', 'Sense', 'Position', 'Score')
+summary(d)
+@
+
+\begin{table}[htpb]
+    \centering
+    \begin{tabular}{l l l l l}
+        Gene hits & factor & family & max score & threshold score \\
+        \Sexpr{s_total} & \Sexpr{s_factor} & \Sexpr{s_family} &
+        \Sexpr{s_max_score} & \Sexpr{s_thr_score}
+    \end{tabular}
+\end{table}
+
+\end{document}
