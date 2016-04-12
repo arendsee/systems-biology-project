@@ -34,12 +34,24 @@ Two vectors are orthogonal if and only if $\boldsymbol{a} \cdot \boldsymbol{b} =
 \label{sec:abstract}
 
 It is now well accepted that novel genes can arise de novo from non-genic
-material. However, little is known about the regulational circuitry of these
-young genes. A few studies have searched for regulatory motifs in the orphan
-promoters, but prediction of \textit{functional} binding sites, often having
-only a few bits of information, is not reliable. I will instead 1) use RNA-seq
-data to predict transcription factors (TF) that regulate each gene and 2)
-compare the results to sequence-based binding site predictions.
+material. However, little is known about the circuitry of these young genes. A
+few studies have searched for regulatory motifs in the orphan promoters, but
+prediction of \textit{functional} binding sites, often having only a few bits
+of information, is not reliable. I will augment sequence-based searches for
+motifs with expression-based predictions of regulating transcription factors,
+whose binding specificities are known from experiment.
+
+My hypothesis is that orphan genes will be directly regulated by only a few
+transcription factors with simple binding sites. If I can predict the direct TF
+regulators for each gene, given the binding sites are experimentally known, I
+can estimate a lower bound of the regulatory information. I can then use a rank
+test to determine whether orphans less information in their promoters. I do
+worry that this approach will average over multiple groups, leading to
+uninteresting results. So I will also experiment with clustering by regulator
+(I'm still a little vague on how I will do this).
+
+\section{Background}
+\label{sec:background}
 
 There are several ways an orphan may acquire existing transcriptional codes.
 They may exploit the promoter of an established gene as a secondary open
@@ -50,99 +62,11 @@ However, there is also evidence that orphans can arise completely de novo.
 Though it may at first seem unlikely that all the transcriptional and
 translational prerequisites would assemble by chance, given the small amount of
 information required for most signals, and given the number of chances a
-population of genomes across thousands of generations have, chance emergence of
-de novo orphans may not be so uncommon.
+population of genomes across thousands of generations have, the chance of de
+novo orphan emergence may not be so small. But this is unacceptably qualitative.
 
-Orphan genes of truly de novo origin should be directly regulated by only a few
-transcription factors with simple binding sites. Alternatively, orphans could
-hijack the transcriptional 
+The first step required to codify orphan dynamics is a quantitative knowledge of 
 
-\section{Background}
-\label{sec:background}
-
-\begin{enumerate}
-  \item Take all TAIR10 models
-  \item Merge genes with identical coding sequences
-  \item Build kallisto index with these genes
-  \item Select set of interesting Arabidopsis studies
-  \begin{itemize}
-      \item want wide variety of conditions
-      \item use SRAdb to get list of runids
-      \item for each, fetch | fastq-dump | kallisto
-  \end{itemize}
-  \item In Sleuth, normalize all the studies merge into final expression table
-\end{enumerate}
-
-\begin{enumerate}
-  \item Do the orphans cluster together in expression?
-  \item If so, do they cluster more than I would expect?
-  \item Take the largest or most interesting cluster
-  \begin{enumerate}
-    \item  Do they share more interactions than I would expect? If so, this is
-       evidence that the expression clustering has some basis in protein
-       function, rather than chance.
-    \item Do they share a common, simple promoter motif?
-    \item Do they share a common upstream promoter?
-  \end{enumerate}
-\end{enumerate}
-
-Naive hypothesis:
-
-If the genes are co-expressed they must be part of the same functional
-pathway. Expression is driven by selection.
-
-Other possibilities:
-
-They share a common origin. Expression is neutral. The co-expression
-predates any shared functionality.
-
-Story 1: A transposon proliferation provided the promoter machinery that
-animated the non-genic precursor of the orphan.
-
-Story 2: If the promoter is completely de novo, the most likely regulatory
-motifs to have arisen are the shortest, most simple ones.
-
-Perhaps, because they are coexpressed originally, and since they therefore
-have the chance to interact, selection will work to enhance the
-similarities, thus drawing the cluster together.
-
-I want to know about the promoters motifs that are being used by the
-orphan genes. However, predicting functional binding sites de novo is
-extraordinarily difficult. So I will start by searching for transcription
-factors that are correlated with the particular orphan genes.
-
-I will treat each orphan as if it is the sole output of the transcription
-factor network. Then I will build a correlation network including the
-transcription factors and the orphan. I assume there are two types of genes:
-transcription factors and non-transcription factors. In a directed graph, the
-transcription factors will be internal nodes, and the non-transcription factors
-are leafs. Thus, non-transcription factors are all unconnected and independent.
-This allows me to model the transcription factors and a single gene, ignoring
-all others. By reducing the search space so greatly, I can use more
-computationally intensive tools than would otherwise be feasible.
-
-Of course, my assumption that non-transcription factors have no effect on the
-transcription of other genes is not entirely true. A protein can, for example,
-catalyze the production of a metabolite that activates a transcriptional
-repressor of another gene.
-
-Do the orphan genes cluster in their own little networks? If so, are these
-functional clusters or artifacts of common origin? For example, were they
-all animated by insertions by the same type of telomere?
-
-Orphan problems:
-
-    Generally GO is not an option. There are only a few orphans that even have
-    GO terms.
-
-    Generally, evolutionary methods are not available.
-
-    There is a few added layer of uncertainty: the orphans may not actually
-    express a functional (whatever that means) protein product. They may be
-    noise.
-
-Unfortunately, the exprimental structures of RNA-seq data are not encoded in
-the SRA metadata.
 
 \section{Methods}
 \label{sec:methods}
@@ -150,24 +74,16 @@ the SRA metadata.
 \subsection{Collecting RNA-seq data}
 \label{sub:collecting_rna_seq_data}
 
-\begin{enumerate}
-  \item Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
-   RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
-   bootstrapping procedure.
-  \item Use snakefile to organize run
-  \item Compare to interaction network data, using IntAct
-  \item Compare to promoter motif set similarity. How to do this? Retrieve
-   putative set of discrete regulatory elements (one exists for
-   Arabidopsis), Draw edges between genes if there share a common element.
-   Weights are relative to the number of shared elements. This is not the
-   only way to do it, but it may work.
-  \item Compare genomic distance network.
-\end{enumerate}
-
-From the selected studies, I removed any runs that
-
- 1. Where not contentional transcriptomic (for example, bisulfite sequencing)
- 1. Where not from Col-0 *A. thaliana*
+Discovery of orphan regulators requires expression data from many conditions. I
+will use exclusively RNA-seq data. To find appropriate data I sifted through
+the abstracts of all 380 RNA-seq studies in Arabidopsis. I selected studies
+that 1) had multiple biological replicates for each condition, 2) where
+conventional RNA-seq (e.g. not bisulfite sequencing), 3) targeted mRNAs (not
+sRNAs), 4) where of the Col-0 Arabidopsis ecotype, 5) where not mutants, 6)
+tested a unique condition. In other words, I selected orthogonal studies of
+wildtype \textit{Arabidopsis thaliana} columbia mRNAs that had multiple
+biological replicates (see \ref{tab:sra_table}). I ended up with 12 studies,
+1xx individual runs, under xx conditions.
 
 \begin{table}[htpb]
     \centering
@@ -214,25 +130,31 @@ From the selected studies, I removed any runs that
 \subsection{Quantify transcript expression}
 \label{sub:quantify_transcript_expression}
 
-For expression quantification we are using a new tool, Kallisto, which is
+For expression quantification I am using a new tool, Kallisto, which is
 a few orders of magnitude faster than the conventional Bowtie and
-Cufflinks approach. Kallisto is so fast, and so easily parallizeable, that
-the bottleneck in the pipeline is data retrieval.
+Cufflinks approach \cite{bray_near-optimal_2015}.
 
-Kallisto is a very fast tool for quantitative analysis of transcriptome
-expression \cite{bray_near-optimal_2015}.
+Rather than aligning all the reads to the genome, Kallisto searches k-mers
+against a de Brujin graph of the transcriptome. In this way it find which
+transcripts could have produced each read.
 
-at.fa - CDS for arabidopsis models (retrieved from the Kallisto website, and
-they got it from Ensembl)
+Lyor Pachter, in his Kallisto paper, used only the coding sequences. But I
+think this is a wretched idea, so I used the gene models of the Arabidopsis
+ARAPORT11 to predict the transcriptome. RNA-seq normalization (either TPM or
+FPKM) is inversely proportional to transcript effective length (total length
+minus the average length of the reads), so if we ommit the 3` and 5` UTRs, the
+reported expression of small transcripts will be falsely inflated. The
+ARAPORT11 annotation includes UTR for almost all of its genes.
 
-Then Sleuth
+I will use Lyor Pachter's Sleuth R package to normalize across the biological
+replicates and produce a single expression vector (with uncertainty estimates)
+for each condition.
 
 \subsection{Select transcription factor set}
 \label{sub:select_transcription_factor_set}
 
-bindingsite-data.tbl - experimentally confirmed [TF-binding
-sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html) from
-Agris.
+Agris provides a set of experimentally confirmed [TF-binding
+sites](http://arabidopsis.med.ohio-state.edu/AtcisDB/bindingsites.html).
 
 I acquired a large list of 2296 TFs (1717 loci) from
 \href{http://planttfdb.cbi.pku.edu.cn/index.php?sp=Ath}[plantTFDB].
@@ -240,7 +162,7 @@ I acquired a large list of 2296 TFs (1717 loci) from
 \subsection{Orphan annotations}
 \label{sub:orphan_annotations}
 
-orphans - an in-house list of orphan TAIR10 model ids.
+I will use an in-house list Arabidopsis genes that I have classified as orphans.
 
 \subsection{Predict direct regulators}
 \label{sub:predict_direct_regulators}
@@ -287,9 +209,107 @@ ggplot(sample_n(d, 5000)) +
 \label{sub:build_full_expression_matrix}
 
 \section{Conclusions}
-\label{sec:conclustions}
+\label{sec:conclusions}
 
 \bibliographystyle{plain}
 \bibliography{report}
 
 \end{document}
+
+% \begin{enumerate}
+%   \item Take all TAIR10 models
+%   \item Merge genes with identical coding sequences
+%   \item Build kallisto index with these genes
+%   \item Select set of interesting Arabidopsis studies
+%   \begin{itemize}
+%       \item want wide variety of conditions
+%       \item use SRAdb to get list of runids
+%       \item for each, fetch | fastq-dump | kallisto
+%   \end{itemize}
+%   \item In Sleuth, normalize all the studies merge into final expression table
+% \end{enumerate}
+%
+% \begin{enumerate}
+%   \item Do the orphans cluster together in expression?
+%   \item If so, do they cluster more than I would expect?
+%   \item Take the largest or most interesting cluster
+%   \begin{enumerate}
+%     \item  Do they share more interactions than I would expect? If so, this is
+%        evidence that the expression clustering has some basis in protein
+%        function, rather than chance.
+%     \item Do they share a common, simple promoter motif?
+%     \item Do they share a common upstream promoter?
+%   \end{enumerate}
+% \end{enumerate}
+%
+% Naive hypothesis:
+%
+% If the genes are co-expressed they must be part of the same functional
+% pathway. Expression is driven by selection.
+%
+% Other possibilities:
+%
+% They share a common origin. Expression is neutral. The co-expression
+% predates any shared functionality.
+%
+% Story 1: A transposon proliferation provided the promoter machinery that
+% animated the non-genic precursor of the orphan.
+%
+% Story 2: If the promoter is completely de novo, the most likely regulatory
+% motifs to have arisen are the shortest, most simple ones.
+%
+% Perhaps, because they are coexpressed originally, and since they therefore
+% have the chance to interact, selection will work to enhance the
+% similarities, thus drawing the cluster together.
+%
+% I want to know about the promoters motifs that are being used by the
+% orphan genes. However, predicting functional binding sites de novo is
+% extraordinarily difficult. So I will start by searching for transcription
+% factors that are correlated with the particular orphan genes.
+%
+% I will treat each orphan as if it is the sole output of the transcription
+% factor network. Then I will build a correlation network including the
+% transcription factors and the orphan. I assume there are two types of genes:
+% transcription factors and non-transcription factors. In a directed graph, the
+% transcription factors will be internal nodes, and the non-transcription factors
+% are leafs. Thus, non-transcription factors are all unconnected and independent.
+% This allows me to model the transcription factors and a single gene, ignoring
+% all others. By reducing the search space so greatly, I can use more
+% computationally intensive tools than would otherwise be feasible.
+%
+% Of course, my assumption that non-transcription factors have no effect on the
+% transcription of other genes is not entirely true. A protein can, for example,
+% catalyze the production of a metabolite that activates a transcriptional
+% repressor of another gene.
+%
+% Do the orphan genes cluster in their own little networks? If so, are these
+% functional clusters or artifacts of common origin? For example, were they
+% all animated by insertions by the same type of telomere?
+%
+% Orphan problems:
+%
+%     Generally GO is not an option. There are only a few orphans that even have
+%     GO terms.
+%
+%     Generally, evolutionary methods are not available.
+%
+%     There is a few added layer of uncertainty: the orphans may not actually
+%     express a functional (whatever that means) protein product. They may be
+%     noise.
+%
+% Unfortunately, the exprimental structures of RNA-seq data are not encoded in
+% the SRA metadata.
+%
+% \begin{enumerate}
+%   \item Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
+%    RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
+%    bootstrapping procedure.
+%   \item Use snakefile to organize run
+%   \item Compare to interaction network data, using IntAct
+%   \item Compare to promoter motif set similarity. How to do this? Retrieve
+%    putative set of discrete regulatory elements (one exists for
+%    Arabidopsis), Draw edges between genes if there share a common element.
+%    Weights are relative to the number of shared elements. This is not the
+%    only way to do it, but it may work.
+%   \item Compare genomic distance network.
+% \end{enumerate}
