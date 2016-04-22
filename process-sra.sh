@@ -40,7 +40,7 @@ while getopts "ht:r:o:n:d:c" opt; do
     esac 
 done
 
-mkdir -p $outdir/results
+mkdir -p $outdir
 
 # build an index of the transcriptome for use by kallisto
 if [[ $trans =~ fa$ ]]
@@ -80,7 +80,7 @@ time fastq-dump        \
 [[ $clean -eq 1 ]] && rm $sradir/${runid}*
 
 # align reads to transcriptome index
-kallisto_outdir=${outdir}/${runid}-bootstrap
+kallisto_outdir=${outdir}/${runid}
 
 if [[ -f ${runid}_2.sra ]]
 then
@@ -104,10 +104,5 @@ else
         $outdir/${runid}_*
 fi
 
-# move results and run details into results folder
-mv $kallisto_outdir/abundance.tsv $outdir/results/${runid}.tsv
-mv $kallisto_outdir/abundance.h5  $outdir/results/${runid}.h5
-mv $kallisto_outdir/run_info.json $outdir/results/${runid}.json
-
 # Remove fastq files
-[[ $clean -eq 1 ]] && rm -rf $outdir/${runid}*
+[[ $clean -eq 1 ]] && rm -rf $outdir/*fastq
