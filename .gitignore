@@ -1,6 +1,7 @@
 *.tab
 *.fastq
 *.sra
+*.mat
 
 *.sqlite
 *.index
