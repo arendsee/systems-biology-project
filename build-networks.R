@@ -80,34 +80,48 @@ correlation.between.conditions <- function(){
 #' Build orphan promoter network
 #' 
 #' @param k keep only motifs with less than n/k non-zero scores
-pm.net <- function(k=5, cor.cutoff=0.55, cor.method='spearman'){
+pm.net <- function(cor.cutoff=0.55, cor.method='spearman', k=5){
 
   spm <- pm[incl_orphans, ]
   spm <- spm[, which(colSums(spm > 0) < (nrow(spm) / k))]
   spm[, 'TaNAC69.1.'] <- NULL
   spm <- spm[which(rowSums(spm) != 0), ]
+  n <- rownames(spm)
   spm <- sapply(spm, function(x) x / max(x))
+  rownames(spm) <- n
   p.cor <- cor(t(spm), method=cor.method)
   ag <- adj2net(p.cor > cor.cutoff)
-  plot(ag, vertex.label=NA, vertex.size=0.2)
-
+  # plot(ag, vertex.label=NA, vertex.size=0.2)
+  ag
 }
 
-em.net <- function(){
+em.net <- function(cor.cutoff=0.6, cor.method='spearman'){
 
   sem <- em[incl_orphans, ]
   sem <- sem[, -c(7,8,9,10)] # these ones are WAY too correlated
   sem[is.na(sem)] <- 0
-  sem <- spm[which(rowSums(spm) != 0), ]
-  mim <- build.mim(t(sem), estimator="spearman")
-  aracne.net <- aracne(mim)
-  ag <- adj2net(aracne.net > 0.4)
-  plot(ag, vertex.label=NA, vertex.size=1)
+  sem <- sem[which(rowSums(sem) != 0), ]
+  sem <- scale(sem)
 
-  p.cor <- cor(t(sem), method='spearman')
-  ag <- adj2net(p.cor > 0.6)
-  plot(ag, vertex.label=NA, vertex.size=0.2)
+  # mim <- build.mim(t(sem), estimator=cor.method)
+  # aracne.net <- aracne(mim)
+  # ag <- adj2net(aracne.net > 0.4)
+  # # plot(ag, vertex.label=NA, vertex.size=1)
+
+  p.cor <- cor(t(sem), method=cor.method)
+  ag <- adj2net(p.cor > cor.cutoff)
+  # plot(ag, vertex.label=NA, vertex.size=0.2)
+  ag
 }
+
+porf <- pm.net(0.55)
+eorf <- em.net(0.8)
+iorf <- graph.intersection(porf, eorf)
+
+par(mfrow=c(1,3), mar=c(0,0,0,0))
+plot(porf, vertex.label=NA, vertex.size=0.2)
+plot(eorf, vertex.label=NA, vertex.size=0.2)
+plot(iorf, vertex.label=NA, vertex.size=0.2)
 
 # plot(ag, vertex.label=NA, vertex.size=1)
 
