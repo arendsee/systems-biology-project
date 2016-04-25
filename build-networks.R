@@ -80,9 +80,9 @@ correlation.between.conditions <- function(){
 #' Build orphan promoter network
 #' 
 #' @param k keep only motifs with less than n/k non-zero scores
-pm.net <- function(cor.cutoff=0.55, cor.method='spearman', k=5){
+pm.net <- function(anet, cor.cutoff=0.55, cor.method='spearman', k=5){
 
-  spm <- pm[incl_orphans, ]
+  spm <- anet[incl_orphans, ]
   spm <- spm[, which(colSums(spm > 0) < (nrow(spm) / k))]
   spm[, 'TaNAC69.1.'] <- NULL
   spm <- spm[which(rowSums(spm) != 0), ]
@@ -95,9 +95,9 @@ pm.net <- function(cor.cutoff=0.55, cor.method='spearman', k=5){
   ag
 }
 
-em.net <- function(cor.cutoff=0.6, cor.method='spearman'){
+em.net <- function(anet, cor.cutoff=0.6, cor.method='spearman'){
 
-  sem <- em[incl_orphans, ]
+  sem <- anet[incl_orphans, ]
   sem <- sem[, -c(7,8,9,10)] # these ones are WAY too correlated
   sem[is.na(sem)] <- 0
   sem <- sem[which(rowSums(sem) != 0), ]
@@ -114,14 +114,23 @@ em.net <- function(cor.cutoff=0.6, cor.method='spearman'){
   ag
 }
 
-porf <- pm.net(0.55)
-eorf <- em.net(0.8)
+porf <- pm.net(pm, 0.55)
+eorf <- em.net(em, 0.8)
 iorf <- graph.intersection(porf, eorf)
 
-par(mfrow=c(1,3), mar=c(0,0,0,0))
+graph.with.permutations <- function(pcut, ecut){
+  perm.em <- em
+  rownames(perm.em) <- sample(rownames(perm.em))
+  graph.intersection(pm.net(pm, pcut), em.net(perm.em, ecut))
+}
+
+riorf <- graph.with.permutations(0.55, 0.8)
+
+par(mfrow=c(2,2), mar=c(0,0,0,0))
 plot(porf, vertex.label=NA, vertex.size=0.2)
 plot(eorf, vertex.label=NA, vertex.size=0.2)
 plot(iorf, vertex.label=NA, vertex.size=0.2)
+plot(riorf, vertex.label=NA, vertex.size=0.2)
 
 # plot(ag, vertex.label=NA, vertex.size=1)
 

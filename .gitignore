@@ -1,3 +1,6 @@
+OUTPUT/
+INTERMEDIATE/
+
 *.tab
 *.fastq
 *.sra
@@ -31,4 +34,3 @@ old/
 output/
 athamap/
 logos/
-
