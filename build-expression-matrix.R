@@ -5,7 +5,13 @@ suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser(
   formatter_class='argparse.RawTextHelpFormatter',
   description='Build an expression matrix from Kallisto output',
-  usage='build-expression-matrix <kallisto-output-directory>')
+  usage='build-expression-matrix <kallisto-output-directory>'
+)
+
+parser$add_argument(
+  'output',
+  help='Output matrix file'
+)
 
 parser$add_argument(
   '-k', '--kallisto-out',
@@ -129,56 +135,5 @@ clean_to_fold <- function(a){
 d <- lapply(studies, clean_to_fold)
 d <- lapply(names(d), function(n) {names(d[[n]]) <- c('locus', n); d[[n]]})
 d <- Reduce(function(...) merge(..., all=T, by='locus'), d)
-d <- as.data.frame(d)
-rownames(d) <- d$locus
-d$locus <- NULL
 
-write.table(as.matrix(d))
-
-# require(tidyr)
-# require(reshape2)
-# require(igraph)
-# require(minet)
-#
-# adj2net <- function(adjmatrix, ...){
-#     graph_from_adjacency_matrix(adjmatrix, mode="undirected", diag=FALSE, ...)
-# }
-# # Return only the largest connected component
-# largest_component <- function(x){
-#     components(x) %$%
-#         which(membership != which.max(csize)) %>%
-#         delete_vertices(graph=x)
-# }
-# # Remove components of size less than or equal to k
-# prune <- function(g, k=1){
-#     components(g) %$%
-#         which(membership %in% which(csize <= k)) %>%
-#         delete_vertices(graph=g)
-# }
-#
-# load('studies.Rdat')
-#
-# d <- sapply(studies, function(x) x$b)
-# d[is.na(d)] <- 0
-# d <- aggregate(abs(d), by=list(genemap$locus_id), FUN=max)
-# rownames(d) <- d[[1]]
-# d <- d[-1]
-# d <- subset(d, rowSums(d) > 0)
-# fulld <- d
-#
-#   # delete in production code
-#   d <- fulld
-#   # d <- scale(d)
-#   d <- d[sample.int(nrow(d), 500), ]
-#
-# mim <- build.mim(t(d), estimator="spearman")
-# aracne.net <- aracne(mim)
-#
-# # aracne_eps <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6)
-# # ag <- lapply(aracne_eps, function(i) adj2net(aracne.net > i))
-# # par(mfrow=c(3,2), mar=c(0,0,0,0))
-# # lapply(ag, largest_component) %>%
-# #     lapply(plot, vertex.label=NA, vertex.size=1)
-#
-# ag <- adj2net(aracne.net > 0.9)
-# plot(ag, vertex.label=NA, vertex.size=1)
+write.table(d, file=args$output, row.names=FALSE, quote=FALSE, sep=" ", col.names=TRUE)
