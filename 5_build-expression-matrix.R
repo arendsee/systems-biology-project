@@ -16,13 +16,13 @@ parser$add_argument(
 parser$add_argument(
   '-k', '--kallisto-out',
   help='Directory of Kallisto output files (folders with SRA runid names)',
-  default='output'
+  default='INTERMEDIATE/kallisto-runs'
 )
 
 parser$add_argument(
   '-c' , '--conditions',
   help='Experimental design file with fields "run_accession" and  "condition"',
-  default='data/conditions.tab'
+  default='INPUT/conditions.tab'
 )
 
 args <- parser$parse_args()
@@ -55,8 +55,8 @@ suppressPackageStartupMessages(library("data.table"))
 #' @examples
 #' 
 get_full_meta_study_ <- function(
-    data_dir='output',
-    condition_file='data/conditions.tab',
+    data_dir=args$kallisto_out,
+    condition_file=args$conditions,
     sample_colname='run_accession',
     condition_colname='condition'
 ){

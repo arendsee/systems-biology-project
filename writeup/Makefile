@@ -10,7 +10,7 @@ clean:
 	latexmk -f -c ${TARGET}.tex
 	rm -rf cache ${TARGET}.tex ${TARGET}.bbl
 
-.PHONY: deep-clean
-deep-clean:
+.PHONY: deepclean
+deepclean:
 	latexmk -f -c ${TARGET}.tex
-	rm -rf cache ${TARGET}.tex ${TARGET}.bbl ${TARGET}.pdf
+	rm -rf cache figure ${TARGET}.tex ${TARGET}.bbl ${TARGET}.pdf
