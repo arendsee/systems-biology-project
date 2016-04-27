@@ -37,11 +37,11 @@ args <- parser$parse_args()
 # biocLite("devtools")    # only if devtools not yet installed
 # biocLite("pachterlab/sleuth")
 
-suppressPackageStartupMessages(library("sleuth"))
-suppressPackageStartupMessages(library("magrittr"))
-suppressPackageStartupMessages(library("rhdf5"))
-suppressPackageStartupMessages(library("dplyr"))
-suppressPackageStartupMessages(library("data.table"))
+require(sleuth)
+require(magrittr)
+require(rhdf5)
+require(dplyr)
+require(data.table)
 
 
 #' Load experimental design
@@ -135,5 +135,6 @@ clean_to_fold <- function(a){
 d <- lapply(studies, clean_to_fold)
 d <- lapply(names(d), function(n) {names(d[[n]]) <- c('locus', n); d[[n]]})
 d <- Reduce(function(...) merge(..., all=T, by='locus'), d)
+d[is.na(d)] <- 0
 
 write.table(d, file=args$output, row.names=FALSE, quote=FALSE, sep=" ", col.names=TRUE)
