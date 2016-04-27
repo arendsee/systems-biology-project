@@ -22,8 +22,8 @@ tfs     <- intersect(tf.info$locus, rownames(em))
 
 loci <- Reduce(union, list(rownames(em), orphans , tf.info$locus))
 
-    # small sample for testing
     loci <- Reduce(union, list(orphans, tf.info$locus, sample(rownames(em), 1000)))
+
 em <- em[loci, ]
 em[is.na(em)] <- 0
 
@@ -49,10 +49,8 @@ for (cut in cutoffs){
   dir.create(dname, recursive=TRUE, showWarnings=FALSE)
   ag <- adj2net(aracne.net > cut)
   for (n in names(testset)){
-      which(vertex_attr(ag)$name %in% c(tfs, testset[[n]])) %>%
+      which(!vertex_attr(ag)$name %in% c(tfs, testset[[n]])) %>%
           delete_vertices(graph=ag) %>%
           write.graph(file.path(dname, paste0(n, '.mat')), 'ncol')
   }
 }
-
-plot(g, vertex.label=NA, vertex.size=0.2)
