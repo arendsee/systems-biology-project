@@ -81,6 +81,10 @@ The first step required to codify orphan dynamics is a quantitative knowledge of
 \subsection{Collecting RNA-seq data}
 \label{sub:collecting_rna_seq_data}
 
+<<echo=FALSE, message=FALSE>>=
+con <- read.delim('../INPUT/conditions.tab')
+@
+
 Discovery of orphan regulators requires expression data from many conditions. I
 will use exclusively RNA-seq data. To find appropriate data I sifted through
 the abstracts of all 380 RNA-seq studies in Arabidopsis. I selected studies
@@ -193,7 +197,7 @@ a DAG from observed data \cite{maathuis} and the pcalg R library.
 \begin{figure}[!ht] \centering
 <<echo=FALSE, fig.width=4, fig.height=3, message=FALSE>>=
 require(ggplot2)
-scores <- read.table('scores.tab')
+scores <- read.delim('../OUTPUT/tf.tab')['score']
 names(scores) <- 'Bits'
 ggplot(scores) + 
     geom_histogram(aes(x=Bits), bins=20)
@@ -213,7 +217,9 @@ However, most of these binding sites are very low information (see Figure
 
 \section{Results}
 
-<<echo=FALSE, message=FALSE, fig.width=7, fig.height=7, fig.cap='Cutoff=0.5'>>=
+\subsection{Orphan results}
+
+<<echo=FALSE, message=FALSE>>=
 require(tidyr)
 require(reshape2)
 require(igraph)
@@ -237,17 +243,9 @@ prune <- function(g, k=1){
         delete_vertices(graph=g)
 }
 
-orphans <- read.table('../INPUT/orphans', stringsAsFactors=F)$V1
-
 tfs <- read.delim('../OUTPUT/tf.tab')
 
 g <- read.graph('../OUTPUT/tf-orf-output/c0.5/orphans.mat', format='ncol')
-
-
-    # # temp data ##############################
-    # tfs$locus <- sample(V(g)$name, nrow(tfs)) 
-    # tfs <- tfs[1:50, ]
-    # ##################################
 
 
 V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
@@ -262,10 +260,10 @@ V(g)[V(g)$name == 'AT3G30720']$color = 'red'
 V(g)[V(g)$name == 'AT3G30720']$size = 5
 
 # Delete all edges that are not connected to a TF
-g <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
+g2 <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
 
 # Number of genes controlled by each TF
-tf.degree <- degree(g, V(g)[V(g)$is_tf])
+tf.degree <- degree(g2, V(g2)[V(g2)$is_tf])
 fam <- unique(tfs[, c('family', 'locus')])
 tf.table <- data.frame(
     tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
@@ -275,15 +273,30 @@ tf.table <- data.frame(
 
 # TFs controlling each gene
 regulators <- list()
-for(i in which(!V(g)$is_tf)){
-    regulators[[V(g)[i]$name]] <- neighbors(g, i, mode='all')$name
+for(i in which(!V(g2)$is_tf)){
+    regulators[[V(g2)[i]$name]] <- neighbors(g2, i, mode='all')$name
 }
-
-plot(g, vertex.label=NA)
 
 @
 
-<<results='asis', echo=FALSE>>=
+\begin{figure}[!ht] \centering
+<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
+plot(g, vertex.label=NA)
+@
+  \caption{Orphan graph, Aracne cutoff of 0.5.}
+  \label{fig:precut}
+\end{figure}
+
+\begin{figure}[!ht] \centering
+<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
+plot(g2, vertex.label=NA)
+@
+  \caption{Orphan graph, Aracne cutoff of 0.5, cutting all connections between non-TF.}
+  \label{fig:postcut}
+\end{figure}
+
+<<results='asis', echo=FALSE, message=FALSE>>=
+require(magrittr)
 merge(tf.table, tfs) %>%
     subset(degree > 0) %>%
     arrange(-degree) %>%
@@ -291,6 +304,8 @@ merge(tf.table, tfs) %>%
 @
 
 <<echo=FALSE>>=
+# em <- read.table('../OUTPUT/matrices/expression.mat', header=T, row.names=1)
+
 correlation.between.promoters <- function(){
   mim <- build.mim(pm, estimator="spearman")
   aracne.net <- aracne(mim)
@@ -299,12 +314,87 @@ correlation.between.promoters <- function(){
 }
 
 correlation.between.conditions <- function(){
-  mim <- build.mim(em, estimator="spearman")
-  aracne.net <- aracne(mim)
-  ag <- adj2net(aracne.net > 0.2)
+  # mim <- build.mim(em, estimator="spearman")
+  # aracne.net <- aracne(mim)
+  # ag <- adj2net(aracne.net > 0.2)
+  cr <- cor(em, 'spearman')
   plot(ag, vertex.size=1)
 }
 @
+
+\subsection{Non-orphan control results}
+
+<<>>=
+tfs <- read.delim('../OUTPUT/tf.tab')
+
+g <- read.graph('../OUTPUT/tf-orf-output/c0.5/r1.mat', format='ncol')
+
+
+V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
+
+V(g)$size = 0.2
+V(g)[V(g)$is_tf]$size = 2
+
+V(g)$color = 'purple'
+V(g)[V(g)$is_tf]$color = 'orange'
+
+# Delete all edges that are not connected to a TF
+g2 <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
+
+# Number of genes controlled by each TF
+tf.degree <- degree(g2, V(g2)[V(g2)$is_tf])
+fam <- unique(tfs[, c('family', 'locus')])
+tf.table <- data.frame(
+    tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
+    locus = names(tf.degree),
+    degree = tf.degree
+)
+
+# TFs controlling each gene
+regulators <- list()
+for(i in which(!V(g2)$is_tf)){
+    regulators[[V(g2)[i]$name]] <- neighbors(g2, i, mode='all')$name
+}
+
+@
+
+\begin{figure}[!ht] \centering
+<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
+plot(g, vertex.label=NA)
+@
+  \caption{Non-orphan graph, Aracne cutoff of 0.5.}
+  \label{fig:precut_non}
+\end{figure}
+
+\begin{figure}[!ht] \centering
+<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
+plot(g2, vertex.label=NA)
+@
+  \caption{Non-orphan graph, Aracne cutoff of 0.5, cutting all connections between non-TF.}
+  \label{fig:postcut_non}
+\end{figure}
+
+
+<<results='asis', echo=FALSE, message=FALSE>>=
+require(magrittr)
+merge(tf.table, tfs) %>%
+    subset(degree > 0) %>%
+    arrange(-degree) %>%
+    xtable
+@
+
+
+%
+% \begin{figure}[!ht] \centering
+% <<echo=FALSE, fig.width=4, fig.height=4, message=FALSE>>=
+% require(ggplot2)
+% correlation.between.conditions()
+% @
+%   \caption{}
+%   \label{fig:conditions}
+% \end{figure}
+% <<>>=
+% @
 
 % \begin{figure}[!ht] \centering
 % <<echo=FALSE, message=FALSE, cache=TRUE, fig.width=6, fig.height=6>>=
