@@ -30,6 +30,10 @@
 set.seed(1234)
 @
 
+<<message=F, echo=F>>=
+require(xtable)
+@
+
 
 Two vectors are orthogonal if and only if $\boldsymbol{a} \cdot \boldsymbol{b} = 0$
 
@@ -209,7 +213,7 @@ However, most of these binding sites are very low information (see Figure
 
 \section{Results}
 
-<<echo=FALSE, message=FALSE>>=
+<<echo=FALSE, message=FALSE, fig.width=7, fig.height=7, fig.cap='Cutoff=0.5'>>=
 require(tidyr)
 require(reshape2)
 require(igraph)
@@ -240,10 +244,10 @@ tfs <- read.delim('../OUTPUT/tf.tab')
 g <- read.graph('../OUTPUT/tf-orf-output/c0.5/orphans.mat', format='ncol')
 
 
-    # temp data ##############################
-    tfs$locus <- sample(V(g)$name, nrow(tfs)) 
-    tfs <- tfs[1:50, ]
-    ##################################
+    # # temp data ##############################
+    # tfs$locus <- sample(V(g)$name, nrow(tfs)) 
+    # tfs <- tfs[1:50, ]
+    # ##################################
 
 
 V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
@@ -254,11 +258,20 @@ V(g)[V(g)$is_tf]$size = 2
 V(g)$color = 'purple'
 V(g)[V(g)$is_tf]$color = 'orange'
 
+V(g)[V(g)$name == 'AT3G30720']$color = 'red'
+V(g)[V(g)$name == 'AT3G30720']$size = 5
+
 # Delete all edges that are not connected to a TF
 g <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
 
 # Number of genes controlled by each TF
-degree(g, V(g)[V(g)$is_tf])
+tf.degree <- degree(g, V(g)[V(g)$is_tf])
+fam <- unique(tfs[, c('family', 'locus')])
+tf.table <- data.frame(
+    tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
+    locus = names(tf.degree),
+    degree = tf.degree
+)
 
 # TFs controlling each gene
 regulators <- list()
@@ -268,6 +281,13 @@ for(i in which(!V(g)$is_tf)){
 
 plot(g, vertex.label=NA)
 
+@
+
+<<results='asis', echo=FALSE>>=
+merge(tf.table, tfs) %>%
+    subset(degree > 0) %>%
+    arrange(-degree) %>%
+    xtable
 @
 
 <<echo=FALSE>>=
