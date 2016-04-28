@@ -204,53 +204,6 @@ Athamap has predicted binding sites for 183 Arabidopsis transcription factors.
 However, most of these binding sites are very low information (see Figure
 \ref{fig:scores}).
 
-\begin{figure}[!ht] \centering
-<<echo=FALSE, message=FALSE, cache=TRUE, fig.width=6, fig.height=6>>=
-
-source('../promoter-normalization.R')
-g <- list()
-for(f in c('HAHB4', 'PCF2', 'MYC2', 'bZIP911(1)', 'TCP20', 'ARR10')){
-    a <- load_promoter(sprintf('../INPUT/athamap/%s.txt', f))
-    b <- add_adjusted_scores(a)
-    d.dis <- density(a$Relative.distance) 
-    g[[f]] <- ggplot() +
-        geom_line(
-            aes(x=position, y=density),
-            color='red',
-            data=data.frame(density=scale(d.dis$y), position=d.dis$x)
-        ) +
-        geom_smooth(
-            aes(x=position, y=score),
-            color='blue',
-            data=data.frame(score=a$Score, position=a$Relative.distance)
-        ) +
-        geom_smooth(
-            aes(x=position, y=adjusted_score),
-            color='green',
-            data=data.frame(adjusted_score=b$adjusted_score, position=b$Relative.distance)
-        ) +
-        ggtitle(f) +
-        theme(
-            axis.text=element_blank(),
-            axis.ticks=element_blank(),
-            axis.title=element_blank()
-        )
-}
-require(gridExtra)
-grid.arrange(grobs=g)
-
-@
-\caption{Binding site density (\textbf{Red}), score \textbf{blue}, and adjusted
-    score \textbf{green}. This is a terrible method.}
-  \label{fig:densities}
-\end{figure}
-
-% \begin{figure}[!ht] \centering
-%     \includegraphics[width=0.5\textwidth]{../data/logos/DEAR4(1)}
-%   \caption{DEAR4 motif}
-% \end{figure}
-
-
 \subsection{Build full expression matrix}
 \label{sub:build_full_expression_matrix}
 
@@ -261,14 +214,6 @@ require(tidyr)
 require(reshape2)
 require(igraph)
 require(dplyr)
-require(minet)
-@
-
-<<echo=FALSE, cache=TRUE>>=
-args <- list(
-    expression_matrix='../OUTPUT/matrices/expression.mat',
-    promoter_matrix='../OUTPUT/matrices/promoter.mat'
-)
 
 adj2net <- function(adjmatrix, ...){
     graph_from_adjacency_matrix(adjmatrix, mode="undirected", diag=FALSE, ...)
@@ -287,16 +232,42 @@ prune <- function(g, k=1){
         which(membership %in% which(csize <= k)) %>%
         delete_vertices(graph=g)
 }
-#
-em <- read.table(args$expression_matrix, header=TRUE, row.names=1)
-pm <- read.table(args$promoter_matrix, header=TRUE, row.names=1)
+
 orphans <- read.table('../INPUT/orphans', stringsAsFactors=F)$V1
-#
-loci <- intersect(rownames(em), rownames(pm))
-#
-incl_orphans <- intersect(loci, orphans)
-em <- em[loci, ]
-pm <- pm[loci, ]
+
+tfs <- read.delim('../OUTPUT/tf.tab')
+
+g <- read.graph('../OUTPUT/tf-orf-output/c0.5/orphans.mat', format='ncol')
+
+
+    # temp data ##############################
+    tfs$locus <- sample(V(g)$name, nrow(tfs)) 
+    tfs <- tfs[1:50, ]
+    ##################################
+
+
+V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
+
+V(g)$size = 0.2
+V(g)[V(g)$is_tf]$size = 2
+
+V(g)$color = 'purple'
+V(g)[V(g)$is_tf]$color = 'orange'
+
+# Delete all edges that are not connected to a TF
+g <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
+
+# Number of genes controlled by each TF
+degree(g, V(g)[V(g)$is_tf])
+
+# TFs controlling each gene
+regulators <- list()
+for(i in which(!V(g)$is_tf)){
+    regulators[[V(g)[i]$name]] <- neighbors(g, i, mode='all')$name
+}
+
+plot(g, vertex.label=NA)
+
 @
 
 <<echo=FALSE>>=
@@ -313,74 +284,121 @@ correlation.between.conditions <- function(){
   ag <- adj2net(aracne.net > 0.2)
   plot(ag, vertex.size=1)
 }
-
-#' Build orphan promoter network
-#' 
-#' @param k keep only motifs with less than n/k non-zero scores
-pm.net <- function(spm, cor.cutoff=0.55, cor.method='spearman', k=5){
-  spm <- spm[, which(colSums(spm > 0) < (nrow(spm) / k))]
-  spm[, 'TaNAC69.1.'] <- NULL
-  spm <- spm[which(rowSums(spm) != 0), ]
-  n <- rownames(spm)
-  spm <- sapply(spm, function(x) x / max(x))
-  rownames(spm) <- n
-  p.cor <- cor(t(spm), method=cor.method)
-  ag <- adj2net(p.cor > cor.cutoff)
-  # plot(ag, vertex.label=NA, vertex.size=0.2)
-  ag
-}
-
-em.net <- function(sem, cor.cutoff=0.6, cor.method='spearman'){
-  sem <- sem[, -c(7,8,9,10)] # these ones are WAY too correlated
-  sem[is.na(sem)] <- 0
-  sem <- sem[which(rowSums(sem) != 0), ]
-  sem <- scale(sem)
-  #
-  # mim <- build.mim(t(sem), estimator=cor.method)
-  # aracne.net <- aracne(mim)
-  # ag <- adj2net(aracne.net > 0.4)
-  # # plot(ag, vertex.label=NA, vertex.size=1)
-  #
-  p.cor <- cor(t(sem), method=cor.method)
-  ag <- adj2net(p.cor > cor.cutoff)
-  # plot(ag, vertex.label=NA, vertex.size=0.2)
-  ag
-}
 @
 
-\begin{figure}[!ht] \centering
-<<echo=FALSE, fig.width=7, fig.height=7, cache=TRUE>>=
+% \begin{figure}[!ht] \centering
+% <<echo=FALSE, message=FALSE, cache=TRUE, fig.width=6, fig.height=6>>=
+%
+% source('../promoter-normalization.R')
+% g <- list()
+% for(f in c('HAHB4', 'PCF2', 'MYC2', 'bZIP911(1)', 'TCP20', 'ARR10')){
+%     a <- load_promoter(sprintf('../INPUT/athamap/%s.txt', f))
+%     b <- add_adjusted_scores(a)
+%     d.dis <- density(a$Relative.distance) 
+%     g[[f]] <- ggplot() +
+%         geom_line(
+%             aes(x=position, y=density),
+%             color='red',
+%             data=data.frame(density=scale(d.dis$y), position=d.dis$x)
+%         ) +
+%         geom_smooth(
+%             aes(x=position, y=score),
+%             color='blue',
+%             data=data.frame(score=a$Score, position=a$Relative.distance)
+%         ) +
+%         geom_smooth(
+%             aes(x=position, y=adjusted_score),
+%             color='green',
+%             data=data.frame(adjusted_score=b$adjusted_score, position=b$Relative.distance)
+%         ) +
+%         ggtitle(f) +
+%         theme(
+%             axis.text=element_blank(),
+%             axis.ticks=element_blank(),
+%             axis.title=element_blank()
+%         )
+% }
+% require(gridExtra)
+% grid.arrange(grobs=g)
+%
+% @
+% \caption{Binding site density (\textbf{Red}), score \textbf{blue}, and adjusted
+%     score \textbf{green}. This is a terrible method.}
+%   \label{fig:densities}
+% \end{figure}
+%
+% \begin{figure}[!ht] \centering
+%     \includegraphics[width=0.5\textwidth]{../data/logos/DEAR4(1)}
+%   \caption{DEAR4 motif}
+% \end{figure}
 
-graph.with.permutations <- function(sem, spm, pcut, ecut, k=5){
-  perm.sem <- sem
-  rownames(perm.sem) <- sample(rownames(perm.sem))
-  graph.intersection(pm.net(spm, pcut, k), em.net(perm.sem, ecut))
-}
 
-  
-spm <- pm[incl_orphans, ]
-sem <- em[incl_orphans, ]
-pk <- 0.65
-ek <- 0.85
-porf <- pm.net(spm, pk, k=10)
-eorf <- em.net(sem, ek)
-iorf <- graph.intersection(porf, eorf)
-riorf <- graph.with.permutations(sem, spm, pk, ek, k=5)
-par(mfrow=c(1,2), mar=c(0,0,0,0))
-# plot(porf, vertex.label=NA, vertex.size=0.2)
-# plot(eorf, vertex.label=NA, vertex.size=0.2)
-plot(iorf, vertex.label=NA, vertex.size=0.2)
-plot(riorf, vertex.label=NA, vertex.size=0.2)
-
-@
-
-\caption{Orphan gene graphs: \textbf{top left} promoter similarity, \textbf{top
-        right} gene co-expression, \textbf{bottom left} promoter-expression
-    intersection, \textbf{bottom right} promoter-expression intersection of
-    graph with randomized labels.}
-  \label{fig:graphs}
-\end{figure}
-
+% \begin{figure}[!ht] \centering
+% <<echo=FALSE, fig.width=7, fig.height=7, cache=TRUE>>=
+%
+% #' Build orphan promoter network
+% #' 
+% #' @param k keep only motifs with less than n/k non-zero scores
+% pm.net <- function(spm, cor.cutoff=0.55, cor.method='spearman', k=5){
+%   spm <- spm[, which(colSums(spm > 0) < (nrow(spm) / k))]
+%   spm[, 'TaNAC69.1.'] <- NULL
+%   spm <- spm[which(rowSums(spm) != 0), ]
+%   n <- rownames(spm)
+%   spm <- sapply(spm, function(x) x / max(x))
+%   rownames(spm) <- n
+%   p.cor <- cor(t(spm), method=cor.method)
+%   ag <- adj2net(p.cor > cor.cutoff)
+%   # plot(ag, vertex.label=NA, vertex.size=0.2)
+%   ag
+% }
+%
+% em.net <- function(sem, cor.cutoff=0.6, cor.method='spearman'){
+%   sem <- sem[, -c(7,8,9,10)] # these ones are WAY too correlated
+%   sem[is.na(sem)] <- 0
+%   sem <- sem[which(rowSums(sem) != 0), ]
+%   sem <- scale(sem)
+%   #
+%   # mim <- build.mim(t(sem), estimator=cor.method)
+%   # aracne.net <- aracne(mim)
+%   # ag <- adj2net(aracne.net > 0.4)
+%   # # plot(ag, vertex.label=NA, vertex.size=1)
+%   #
+%   p.cor <- cor(t(sem), method=cor.method)
+%   ag <- adj2net(p.cor > cor.cutoff)
+%   # plot(ag, vertex.label=NA, vertex.size=0.2)
+%   ag
+% }
+%
+% graph.with.permutations <- function(sem, spm, pcut, ecut, k=5){
+%   perm.sem <- sem
+%   rownames(perm.sem) <- sample(rownames(perm.sem))
+%   graph.intersection(pm.net(spm, pcut, k), em.net(perm.sem, ecut))
+% }
+%
+%   
+% spm <- pm[incl_orphans, ]
+% sem <- em[incl_orphans, ]
+% pk <- 0.65
+% ek <- 0.85
+% porf <- pm.net(spm, pk, k=10)
+% eorf <- em.net(sem, ek)
+% iorf <- graph.intersection(porf, eorf)
+% riorf <- graph.with.permutations(sem, spm, pk, ek, k=5)
+% par(mfrow=c(1,2), mar=c(0,0,0,0))
+% # plot(porf, vertex.label=NA, vertex.size=0.2)
+% # plot(eorf, vertex.label=NA, vertex.size=0.2)
+% plot(iorf, vertex.label=NA, vertex.size=0.2)
+% plot(riorf, vertex.label=NA, vertex.size=0.2)
+%
+% @
+%
+% \caption{Orphan gene graphs: \textbf{top left} promoter similarity, \textbf{top
+%         right} gene co-expression, \textbf{bottom left} promoter-expression
+%     intersection, \textbf{bottom right} promoter-expression intersection of
+%     graph with randomized labels.}
+%   \label{fig:graphs}
+% \end{figure}
+%
 % \begin{figure}[!ht] \centering
 % <<echo=FALSE, fig.width=7, fig.height=7, cache=TRUE>>=
 %
