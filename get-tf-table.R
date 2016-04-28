@@ -10,9 +10,9 @@ d <- read_html('http://www.athamap.de/documentation_matrix_based.php') %>%
 d$Factor <- gsub('.Target.*', '', d$Factor)
 d$AGI <- gsub('At(\\d)g', 'AT\\1G', d$AGI)
 
-d <- d[c('Factor', 'Family', 'AGI')]
+d <- d[c(1,2,7,4)]
 
-names(d) <- c('factor', 'family', 'locus')
+names(d) <- c('factor', 'family', 'locus', 'score')
 d <- subset(d, grepl('^AT\\dG\\d{5}$', d$locus, perl=TRUE))
 
 write.table(d, file='OUTPUT/tf.tab', quote=F, sep="\t", row.names=F)
