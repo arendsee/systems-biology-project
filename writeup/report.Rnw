@@ -4,7 +4,6 @@
 \usepackage{wrapfig}
 \usepackage{amsmath}
 \usepackage{enumerate}
-\usepackage{placeins}
 \usepackage{color}
 \usepackage{hyperref}
 \usepackage{array}
@@ -15,6 +14,18 @@
     linkcolor=blue,
     urlcolor=blue
 }
+
+% Prevent floats from crossing section or subsection boundaries
+\usepackage[section]{placeins}
+% Credit for this voodoo goes to Heiko Oberdiek
+\makeatletter
+\AtBeginDocument{%
+  \expandafter\renewcommand\expandafter\subsection\expandafter{%
+    \expandafter\@fb@secFB\subsection
+  }%
+}
+\makeatother
+
 \usepackage{graphicx}
 \newcolumntype{L}{>{\arraybackslash}m{3cm}}
 \setlength{\parskip}{3mm}
@@ -26,16 +37,13 @@
 
 \begin{document}
 
-<<>>=
+<<echo=FALSE>>=
 set.seed(1234)
 @
 
 <<message=F, echo=F>>=
 require(xtable)
 @
-
-
-Two vectors are orthogonal if and only if $\boldsymbol{a} \cdot \boldsymbol{b} = 0$
 
 \section{Abstract}
 \label{sec:abstract}
@@ -52,10 +60,9 @@ My hypothesis is that orphan genes will be directly regulated by only a few
 transcription factors with simple binding sites. If I can predict the direct TF
 regulators for each gene, given the binding sites are experimentally known, I
 can estimate a lower bound of the regulatory information. I can then use a rank
-test to determine whether orphans less information in their promoters. I do
+test to determine whether orphans have less information in their promoters. I do
 worry that this approach will average over multiple groups, leading to
-uninteresting results. So I will also experiment with clustering by regulator
-(I'm still a little vague on how I will do this).
+uninteresting results.
 
 \section{Background}
 \label{sec:background}
@@ -70,9 +77,7 @@ Though it may at first seem unlikely that all the transcriptional and
 translational prerequisites would assemble by chance, given the small amount of
 information required for most signals, and given the number of chances a
 population of genomes across thousands of generations have, the chance of de
-novo orphan emergence may not be so small. But this is unacceptably qualitative.
-
-The first step required to codify orphan dynamics is a quantitative knowledge of 
+novo orphan emergence may not be so small.
 
 
 \section{Methods}
@@ -148,17 +153,30 @@ Rather than aligning all the reads to the genome, Kallisto searches k-mers
 against a de Brujin graph of the transcriptome. In this way it finds which
 transcripts could have produced each read.
 
-Lyor Pachter, in his Kallisto paper, used only the coding sequences. But I
-think this is a wretched idea, so I used the gene models of the Arabidopsis
-ARAPORT11 to predict the transcriptome. RNA-seq normalization (either TPM or
-FPKM) is inversely proportional to transcript effective length (total length
-minus the average length of the reads), so if we ommit the 3` and 5` UTRs, the
-reported expression of small transcripts will be falsely inflated. The
-ARAPORT11 annotation includes UTR for almost all of its genes.
+Lyor Pachter, in his Kallisto paper, used only the coding sequences.  RNA-seq
+normalization (either TPM or FPKM) is inversely proportional to transcript
+effective length (total length minus the average length of the reads), so if we
+ommit the 3` and 5` UTRs, the reported expression of small transcripts will be
+falsely inflated. The ARAPORT11 annotation includes UTR for almost all of its
+genes.
 
 I will use Lyor Pachter's Sleuth R package to normalize across the biological
 replicates and produce a single expression vector (with uncertainty estimates)
 for each condition.
+
+<<echo=FALSE, message=FALSE>>=
+require(ggplot2)
+require(reshape2)
+require(dplyr)
+require(magrittr)
+g.degr <- read.delim('../OUTPUT/tf-orf-output/graph-degrees.tab')
+g.stat <- read.delim('../OUTPUT/tf-orf-output/graph-stats.tab')
+g.degr <- mutate(g.degr, cutoff=factor(cutoff), degree=factor(degree)) %>%
+    group_by(cutoff, degree) %>%
+    summarize(n = n()) %>%
+    ungroup %>%
+    mutate(degree=as.numeric(degree))
+@
 
 \subsection{Select transcription factor set}
 \label{sub:select_transcription_factor_set}
@@ -182,25 +200,25 @@ older than they appear, having homologs which I missed.
 \subsection{Predict direct regulators}
 \label{sub:predict_direct_regulators}
 
-There are several possible approaches I could use here.
-
-The easiest possibility would be to use ARACNE to trim indirect interactions.
-Any links remaining between the orphan and a transcription factor would be
-assumed to be causal. Although it is possible that the orphan itself is a
-transcription factor.
-
-A possibly more powerful method is a form of intervention calculus that builds
-a DAG from observed data \cite{maathuis} and the pcalg R library.
+I will use ARACNE to trim indirect interactions. ARACNE breaks every triangle
+on its weakest edge. Any links remaining between the orphan and a transcription
+factor would be assumed to be causal. Although it is possible that the orphan
+itself is a transcription factor.
 
 \subsection{Adjustment of motif scores}
 
 \begin{figure}[!ht] \centering
-<<echo=FALSE, fig.width=4, fig.height=3, message=FALSE>>=
+<<score, dpi=300, echo=FALSE, fig.width=4, fig.height=3, message=FALSE>>=
 require(ggplot2)
 scores <- read.delim('../OUTPUT/tf.tab')['score']
 names(scores) <- 'Bits'
 ggplot(scores) + 
     geom_histogram(aes(x=Bits), bins=20)
+
+# png(filename='~/Dropbox/sysbio-img_score.png', width = 4, height = 4, units = 'in', res = 300)
+# ggplot(scores) + 
+#     geom_histogram(aes(x=Bits), bins=20)
+# dev.off()
 @
   \caption{Bits of information for 183 Arabidopsis TF binding sites.
       For comparison, 2 and 3 letter passwords (a-z) contain 9.4 and 17 bits of
@@ -212,12 +230,31 @@ Athamap has predicted binding sites for 183 Arabidopsis transcription factors.
 However, most of these binding sites are very low information (see Figure
 \ref{fig:scores}).
 
-\subsection{Build full expression matrix}
-\label{sub:build_full_expression_matrix}
-
 \section{Results}
 
-\subsection{Orphan results}
+\subsection{Plots of orphan to TF connectivity}
+
+\begin{center}
+<<degree_chart, echo=F, fig.width=5, fig.height=5>>=
+ggplot(g.degr) +
+    geom_path(aes(x=degree, y=n, group=cutoff)) +
+    facet_wrap(~cutoff)
+@
+\end{center}
+
+\begin{center}
+<<graph_stats, echo=F, fig.width=4, fig.height=4>>=
+m <- melt(g.stat, id.vars='cutoff')
+ggplot(m) +
+    geom_point(aes(x=cutoff, y=value), size=2) +
+    geom_path(aes(x=cutoff, y=value, group=variable)) +
+    facet_grid(variable ~ ., scale='free_y')
+@
+\end{center}
+
+It is important to choose a good threshold for ARACNE. Something is really
+strange happens when we hit a cutoff of 0.6. I will experiment with a few
+cutoffs (0.575, 0.6, 0.7, 0.8) and see how robust the trends I find are.
 
 <<echo=FALSE, message=FALSE>>=
 require(tidyr)
@@ -243,408 +280,223 @@ prune <- function(g, k=1){
         delete_vertices(graph=g)
 }
 
-tfs <- read.delim('../OUTPUT/tf.tab')
+get.the.graph <- function(cutoff, mat='orphans') {
+    g <- read.graph(sprintf('%s/%s/%s.mat' , '../OUTPUT/tf-orf-output/', cutoff, mat), format='ncol')
+    V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
+    V(g)$tf_name <- ifelse(V(g)$is_tf, as.character(tfs[which(tfs$locus %in% V(g)$name), ]$factor), NA)
 
-g <- read.graph('../OUTPUT/tf-orf-output/c0.5/orphans.mat', format='ncol')
+    V(g)$size = 0.2
+    V(g)[V(g)$is_tf]$size = 4
+
+    V(g)$color = 'purple'
+    V(g)[V(g)$is_tf]$color = 'orange'
+
+    V(g)[V(g)$name == 'AT3G30720']$color = 'red'
+    V(g)[V(g)$name == 'AT3G30720']$size = 5
+
+    comp <- components(g)
+    cluster11 <- comp$membership[which(comp$membership == 11)] %>% names
 
 
-V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
+    # Delete all edges that are not connected to a TF
+    g2 <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
 
-V(g)$size = 0.2
-V(g)[V(g)$is_tf]$size = 2
+    # Number of genes controlled by each TF
+    tf.degree <- degree(g2, V(g2)[V(g2)$is_tf])
+    fam <- unique(tfs[, c('family', 'locus')])
+    tf.table <- data.frame(
+        tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
+        locus = names(tf.degree),
+        degree = tf.degree
+    )
 
-V(g)$color = 'purple'
-V(g)[V(g)$is_tf]$color = 'orange'
+    # TFs controlling each gene
+    regulators <- list()
+    for(i in which(!V(g2)$is_tf)){
+        regulators[[V(g2)[i]$name]] <- neighbors(g2, i, mode='all')$name
+    }
 
-V(g)[V(g)$name == 'AT3G30720']$color = 'red'
-V(g)[V(g)$name == 'AT3G30720']$size = 5
-
-# Delete all edges that are not connected to a TF
-g2 <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
-
-# Number of genes controlled by each TF
-tf.degree <- degree(g2, V(g2)[V(g2)$is_tf])
-fam <- unique(tfs[, c('family', 'locus')])
-tf.table <- data.frame(
-    tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
-    locus = names(tf.degree),
-    degree = tf.degree
-)
-
-# TFs controlling each gene
-regulators <- list()
-for(i in which(!V(g2)$is_tf)){
-    regulators[[V(g2)[i]$name]] <- neighbors(g2, i, mode='all')$name
+    list(
+        g=g,
+        comp=comp,
+        g2=g2,
+        tf.degree=tf.degree,
+        tf.table=tf.table,
+        regulators=regulators
+    )
 }
 
+tfs <- read.delim('../OUTPUT/tf.tab')
+
+# cutoffs
+cut <- c('c0.575', 'c0.6', 'c0.7', 'c0.8') 
+
+algof <- lapply(cut, get.the.graph)
+
+names(algof) <- cut %>% gsub(pattern='c', replacement='cutoff=')
 @
 
 \begin{figure}[!ht] \centering
-<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
-plot(g, vertex.label=NA)
+<<message=F, echo=F, dpi=300, fig.width=7, fig.height=7, cache=T>>=
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+    plot(algof[[1]]$g , vertex.label=NA, main=names(algof)[1]) #vertex.label=V(algof[[1]]$g )$tf_name)
+    plot(algof[[1]]$g2, vertex.label=NA, main=names(algof)[1]) #vertex.label=V(algof[[1]]$g2)$tf_name)
+    plot(algof[[2]]$g , vertex.label=NA, main=names(algof)[2]) #vertex.label=V(algof[[2]]$g )$tf_name)
+    plot(algof[[2]]$g2, vertex.label=NA, main=names(algof)[2]) #vertex.label=V(algof[[2]]$g2)$tf_name)
 @
-  \caption{Orphan graph, Aracne cutoff of 0.5.}
-  \label{fig:precut}
+  \caption{Graph of orphans (small dots) and TFs (orange). The edges not
+      connected to a TF are trimmed in plots on the right. The ARACNE cutoffs
+      are listed above the plots.}
+  \label{fig:1-2}
 \end{figure}
 
 \begin{figure}[!ht] \centering
-<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
-plot(g2, vertex.label=NA)
+<<message=F, echo=F, dpi=300, fig.width=7, fig.height=7, cache=T>>=
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+    plot(algof[[3]]$g , vertex.label=NA, main=names(algof)[3]) #vertex.label=V(algof[[3]]$g )$tf_name)
+    plot(algof[[3]]$g2, vertex.label=NA, main=names(algof)[3]) #vertex.label=V(algof[[3]]$g2)$tf_name)
+    plot(algof[[4]]$g , vertex.label=NA, main=names(algof)[4]) #vertex.label=V(algof[[4]]$g )$tf_name)
+    plot(algof[[4]]$g2, vertex.label=NA, main=names(algof)[4]) #vertex.label=V(algof[[4]]$g2)$tf_name)
 @
-  \caption{Orphan graph, Aracne cutoff of 0.5, cutting all connections between non-TF.}
-  \label{fig:postcut}
+  \caption{Graph of orphans (small dots) and TFs (orange). The edges not
+      connected to a TF are trimmed in plots on the right. The ARACNE cutoffs
+      are listed above the plots.}
+  \label{fig:3-4}
 \end{figure}
 
-<<results='asis', echo=FALSE, message=FALSE>>=
-require(magrittr)
-merge(tf.table, tfs) %>%
-    subset(degree > 0) %>%
-    arrange(-degree) %>%
-    xtable
+The results for orphans seem quite robust against cutoff. That is, there are
+always only 3 or 4 TFs outside the giant clusters (See figures \ref{fig:1-2}
+and \ref{fig:3-4}).
+
+\subsection{Plots of random genes to TF connectivity}
+
+In order to test the significance of the trends in the orphans, I sampled 100
+random sets of genes that were both non-orphan and non-TF. The size of each set
+was equal to the number of orphans.
+
+The orphan and non-orphan plots share a few features in common (by visual
+comparison of figures \ref{fig:1-2} and \ref{fig:3-4} to figures \ref{fig:r1-2}
+and \ref{fig:r3-4}. They all share the same 3 giant, tight clusters. But there
+are two features that seem to stand out among the orphans.
+
+\begin{enumerate}
+  \item The orphans seem to have less diverse promoters, as I hypothesized.
+  \item The orphans have three tightly linked clusters that are not near any
+      known promoter.
+\end{enumerate}
+
+The second observation is quite bizarre. I would not have predicted this.
+
+<<cache=TRUE, echo=FALSE>>=
+rlgof.names <- 1:100 %>% sprintf(fmt='r%s')
+rlgof <- lapply(rlgof.names, function(a) get.the.graph('c0.6', mat=a))
+names(rlgof) <- rlgof.names
 @
+
+\begin{figure}[!ht] \centering
+<<message=F, echo=F, dpi=300, fig.width=7, fig.height=7, cache=T>>=
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+    plot(rlgof[[1]]$g , vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[1]]$g )$tf_name)
+    plot(rlgof[[1]]$g2, vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[1]]$g2)$tf_name)
+    plot(rlgof[[2]]$g , vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[2]]$g )$tf_name)
+    plot(rlgof[[2]]$g2, vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[2]]$g2)$tf_name)
+@
+  \caption{Graph of randomly selected genes (small dots) and TFs (orange). The edges not
+      connected to a TF are trimmed in plots on the right. The ARACNE cutoffs
+      are listed above the plots.}
+  \label{fig:r1-2}
+\end{figure}
+
+\begin{figure}[!ht] \centering
+<<message=F, echo=F, dpi=300, fig.width=7, fig.height=7, cache=T>>=
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+    plot(rlgof[[3]]$g , vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[3]]$g )$tf_name)
+    plot(rlgof[[3]]$g2, vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[3]]$g2)$tf_name)
+    plot(rlgof[[4]]$g , vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[4]]$g )$tf_name)
+    plot(rlgof[[4]]$g2, vertex.label=NA, main='cutoff=0.6') #vertex.label=V(rlgof[[4]]$g2)$tf_name)
+@
+  \caption{Graph of randomly selected genes (small dots) and TFs (orange). The edges not
+      connected to a TF are trimmed in plots on the right. The ARACNE cutoffs
+      are listed above the plots.}
+  \label{fig:r3-4}
+\end{figure}
+
+\subsection{Testing the significance of orphan regulatory sparsity}
+
+There are several different metrics I could test for TF overrepresentation. The
+simplest one is to ignore degree and just count the number of unique TFs in
+each network (orange dots in the plots above). Only 4 of the 100 random samples
+had as low a number of TFs as the orphans (10). This works out to a p-value of
+0.04. This is consistent with my hypothesis (in hindsight, I should have drawn
+more random samples).
 
 <<echo=FALSE>>=
-# em <- read.table('../OUTPUT/matrices/expression.mat', header=T, row.names=1)
-
-correlation.between.promoters <- function(){
-  mim <- build.mim(pm, estimator="spearman")
-  aracne.net <- aracne(mim)
-  ag <- adj2net(aracne.net > 0.3)
-  plot(ag, vertex.size=1)
-}
-
-correlation.between.conditions <- function(){
-  # mim <- build.mim(em, estimator="spearman")
-  # aracne.net <- aracne(mim)
-  # ag <- adj2net(aracne.net > 0.2)
-  cr <- cor(em, 'spearman')
-  plot(ag, vertex.size=1)
-}
+not.k <- lapply(rlgof, function(x) nrow(x$tf.table)) %>% unlist
+orp.k <- nrow(algof[[2]]$tf.table)
+pval  <- 1 - sum(not.k > orp.k) / (length(not.k))
 @
 
-\subsection{Non-orphan control results}
-
-<<>>=
-tfs <- read.delim('../OUTPUT/tf.tab')
-
-g <- read.graph('../OUTPUT/tf-orf-output/c0.5/r1.mat', format='ncol')
-
-
-V(g)$is_tf <- ifelse(V(g)$name %in% tfs$locus, T, F)
-
-V(g)$size = 0.2
-V(g)[V(g)$is_tf]$size = 2
-
-V(g)$color = 'purple'
-V(g)[V(g)$is_tf]$color = 'orange'
-
-# Delete all edges that are not connected to a TF
-g2 <- delete_edges(g, E(g)[!V(g)$is_tf %--%!V(g)$is_tf])
-
-# Number of genes controlled by each TF
-tf.degree <- degree(g2, V(g2)[V(g2)$is_tf])
-fam <- unique(tfs[, c('family', 'locus')])
-tf.table <- data.frame(
-    tf = fam[which(fam$locus %in% names(tf.degree)), 'family'],
-    locus = names(tf.degree),
-    degree = tf.degree
-)
-
-# TFs controlling each gene
-regulators <- list()
-for(i in which(!V(g2)$is_tf)){
-    regulators[[V(g2)[i]$name]] <- neighbors(g2, i, mode='all')$name
-}
-
-@
-
-\begin{figure}[!ht] \centering
-<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
-plot(g, vertex.label=NA)
-@
-  \caption{Non-orphan graph, Aracne cutoff of 0.5.}
-  \label{fig:precut_non}
-\end{figure}
-
-\begin{figure}[!ht] \centering
-<<echo=F, fig.width=7, fig.height=7, cache=TRUE>>=
-plot(g2, vertex.label=NA)
-@
-  \caption{Non-orphan graph, Aracne cutoff of 0.5, cutting all connections between non-TF.}
-  \label{fig:postcut_non}
-\end{figure}
-
+\subsection{Orphan regulating TFs}
 
 <<results='asis', echo=FALSE, message=FALSE>>=
 require(magrittr)
-merge(tf.table, tfs) %>%
+merge(algof[[2]]$tf.table, tfs) %>%
     subset(degree > 0) %>%
     arrange(-degree) %>%
-    xtable
+    xtable(caption='Orphan regulating TFs. Cutoff of 0.8')
 @
 
+Quite in contrast to my expectations, these promoters are pretty typical.
 
-%
-% \begin{figure}[!ht] \centering
-% <<echo=FALSE, fig.width=4, fig.height=4, message=FALSE>>=
-% require(ggplot2)
-% correlation.between.conditions()
-% @
-%   \caption{}
-%   \label{fig:conditions}
-% \end{figure}
-% <<>>=
-% @
+\section{Conclusions and future directions}
 
-% \begin{figure}[!ht] \centering
-% <<echo=FALSE, message=FALSE, cache=TRUE, fig.width=6, fig.height=6>>=
-%
-% source('../promoter-normalization.R')
-% g <- list()
-% for(f in c('HAHB4', 'PCF2', 'MYC2', 'bZIP911(1)', 'TCP20', 'ARR10')){
-%     a <- load_promoter(sprintf('../INPUT/athamap/%s.txt', f))
-%     b <- add_adjusted_scores(a)
-%     d.dis <- density(a$Relative.distance) 
-%     g[[f]] <- ggplot() +
-%         geom_line(
-%             aes(x=position, y=density),
-%             color='red',
-%             data=data.frame(density=scale(d.dis$y), position=d.dis$x)
-%         ) +
-%         geom_smooth(
-%             aes(x=position, y=score),
-%             color='blue',
-%             data=data.frame(score=a$Score, position=a$Relative.distance)
-%         ) +
-%         geom_smooth(
-%             aes(x=position, y=adjusted_score),
-%             color='green',
-%             data=data.frame(adjusted_score=b$adjusted_score, position=b$Relative.distance)
-%         ) +
-%         ggtitle(f) +
-%         theme(
-%             axis.text=element_blank(),
-%             axis.ticks=element_blank(),
-%             axis.title=element_blank()
-%         )
-% }
-% require(gridExtra)
-% grid.arrange(grobs=g)
-%
-% @
-% \caption{Binding site density (\textbf{Red}), score \textbf{blue}, and adjusted
-%     score \textbf{green}. This is a terrible method.}
-%   \label{fig:densities}
-% \end{figure}
-%
-% \begin{figure}[!ht] \centering
-%     \includegraphics[width=0.5\textwidth]{../data/logos/DEAR4(1)}
-%   \caption{DEAR4 motif}
-% \end{figure}
+This simple study provides evidence that orphan promoters may indeed be less
+diverse than conventional genes.
 
+When time permits, I plan to repeat this study with better RNA-seq data. Also
+the triple clusters so prominent in the plots need to be addressed. They may be
+an artifact of the conditions I selected (e.g. root, leaves, and flowers).
 
-% \begin{figure}[!ht] \centering
-% <<echo=FALSE, fig.width=7, fig.height=7, cache=TRUE>>=
+The second half of my hypothesis, that the information content of the promoter
+motifs is lower among the orphans, is not supported by this study. I did not
+statistically test for a difference, though.
+
+% Next I can test the difference in connected size of the graphs (prior to
+% cutting edges not linked to TFs).
 %
-% #' Build orphan promoter network
-% #' 
-% #' @param k keep only motifs with less than n/k non-zero scores
-% pm.net <- function(spm, cor.cutoff=0.55, cor.method='spearman', k=5){
-%   spm <- spm[, which(colSums(spm > 0) < (nrow(spm) / k))]
-%   spm[, 'TaNAC69.1.'] <- NULL
-%   spm <- spm[which(rowSums(spm) != 0), ]
-%   n <- rownames(spm)
-%   spm <- sapply(spm, function(x) x / max(x))
-%   rownames(spm) <- n
-%   p.cor <- cor(t(spm), method=cor.method)
-%   ag <- adj2net(p.cor > cor.cutoff)
-%   # plot(ag, vertex.label=NA, vertex.size=0.2)
-%   ag
+% <<echo=FALSE>>=
+% k <- length(algof[[2]]$comp$csize)
+% d <- data.frame(
+%     csize=algof[[2]]$comp$csize %>% sort(dec=T),
+%     color=rep('orphan', k),
+%     rank=1:k,
+%     group=rep(0, k)
+% )
+% for(i in 1:length(rlgof)){
+%     k <- length(rlgof[[i]]$comp$csize)
+%     dd <- data.frame(
+%         csize=rlgof[[i]]$comp$csize %>% sort(dec=T),
+%         color=rep('random', k),
+%         rank=1:k,
+%         group=rep(i, k)
+%     )
+%     d <- rbind(d, dd)
 % }
-%
-% em.net <- function(sem, cor.cutoff=0.6, cor.method='spearman'){
-%   sem <- sem[, -c(7,8,9,10)] # these ones are WAY too correlated
-%   sem[is.na(sem)] <- 0
-%   sem <- sem[which(rowSums(sem) != 0), ]
-%   sem <- scale(sem)
-%   #
-%   # mim <- build.mim(t(sem), estimator=cor.method)
-%   # aracne.net <- aracne(mim)
-%   # ag <- adj2net(aracne.net > 0.4)
-%   # # plot(ag, vertex.label=NA, vertex.size=1)
-%   #
-%   p.cor <- cor(t(sem), method=cor.method)
-%   ag <- adj2net(p.cor > cor.cutoff)
-%   # plot(ag, vertex.label=NA, vertex.size=0.2)
-%   ag
-% }
-%
-% graph.with.permutations <- function(sem, spm, pcut, ecut, k=5){
-%   perm.sem <- sem
-%   rownames(perm.sem) <- sample(rownames(perm.sem))
-%   graph.intersection(pm.net(spm, pcut, k), em.net(perm.sem, ecut))
-% }
-%
-%   
-% spm <- pm[incl_orphans, ]
-% sem <- em[incl_orphans, ]
-% pk <- 0.65
-% ek <- 0.85
-% porf <- pm.net(spm, pk, k=10)
-% eorf <- em.net(sem, ek)
-% iorf <- graph.intersection(porf, eorf)
-% riorf <- graph.with.permutations(sem, spm, pk, ek, k=5)
-% par(mfrow=c(1,2), mar=c(0,0,0,0))
-% # plot(porf, vertex.label=NA, vertex.size=0.2)
-% # plot(eorf, vertex.label=NA, vertex.size=0.2)
-% plot(iorf, vertex.label=NA, vertex.size=0.2)
-% plot(riorf, vertex.label=NA, vertex.size=0.2)
-%
+% ggplot(subset(d, rank>3)) +
+%     geom_path(aes(x=rank, y=csize, group=group, color=color))
 % @
 %
-% \caption{Orphan gene graphs: \textbf{top left} promoter similarity, \textbf{top
-%         right} gene co-expression, \textbf{bottom left} promoter-expression
-%     intersection, \textbf{bottom right} promoter-expression intersection of
-%     graph with randomized labels.}
-%   \label{fig:graphs}
-% \end{figure}
 %
-% \begin{figure}[!ht] \centering
-% <<echo=FALSE, fig.width=7, fig.height=7, cache=TRUE>>=
 %
-% n <- length(incl_orphans)
-% loci_sample <- sample(rownames(em)[-which(rownames(em) %in% incl_orphans)], n)
-%   
-% spm <- pm[loci_sample, ]
-% sem <- em[loci_sample, ]
-%
-% pk <- 0.9
-% ek <- 0.9
-% porf <- pm.net(spm, pk)
-% eorf <- em.net(sem, ek)
-% iorf <- graph.intersection(porf, eorf)
-%
-% riorf <- graph.with.permutations(spm, sem, pk, ek)
-%
-% par(mfrow=c(2,2), mar=c(0,0,0,0))
-% # plot(porf, vertex.label=NA, vertex.size=0.2)
-% # plot(eorf, vertex.label=NA, vertex.size=0.2)
-% plot(iorf, vertex.label=NA, vertex.size=0.2)
-% plot(riorf, vertex.label=NA, vertex.size=0.2)
+% <<results='asis', echo=FALSE, message=FALSE>>=
+% require(magrittr)
+% merge(tf.table, tfs) %>%
+%     subset(degree > 0) %>%
+%     arrange(-degree) %>%
+%     xtable
 % @
-%
-% \caption{Conserved gene graphs: \textbf{top left} promoter similarity, \textbf{top
-%         right} gene co-expression, \textbf{bottom left} promoter-expression
-%     intersection, \textbf{bottom right} promoter-expression intersection of
-%     graph with randomized labels.}
-%   \label{fig:graphs_ancient}
-% \end{figure}
-%
-% \section{Conclusions}
-% \label{sec:conclusions}
-%
-% There are many problems with what I did.
 
 \bibliographystyle{plain}
 \bibliography{report}
 
 \end{document}
-
-
-% \begin{enumerate}
-%   \item Take all TAIR10 models
-%   \item Merge genes with identical coding sequences
-%   \item Build kallisto index with these genes
-%   \item Select set of interesting Arabidopsis studies
-%   \begin{itemize}
-%       \item want wide variety of conditions
-%       \item use SRAdb to get list of runids
-%       \item for each, fetch | fastq-dump | kallisto
-%   \end{itemize}
-%   \item In Sleuth, normalize all the studies merge into final expression table
-% \end{enumerate}
-%
-% \begin{enumerate}
-%   \item Do the orphans cluster together in expression?
-%   \item If so, do they cluster more than I would expect?
-%   \item Take the largest or most interesting cluster
-%   \begin{enumerate}
-%     \item  Do they share more interactions than I would expect? If so, this is
-%        evidence that the expression clustering has some basis in protein
-%        function, rather than chance.
-%     \item Do they share a common, simple promoter motif?
-%     \item Do they share a common upstream promoter?
-%   \end{enumerate}
-% \end{enumerate}
-%
-% Naive hypothesis:
-%
-% If the genes are co-expressed they must be part of the same functional
-% pathway. Expression is driven by selection.
-%
-% Other possibilities:
-%
-% They share a common origin. Expression is neutral. The co-expression
-% predates any shared functionality.
-%
-% Story 1: A transposon proliferation provided the promoter machinery that
-% animated the non-genic precursor of the orphan.
-%
-% Story 2: If the promoter is completely de novo, the most likely regulatory
-% motifs to have arisen are the shortest, most simple ones.
-%
-% Perhaps, because they are coexpressed originally, and since they therefore
-% have the chance to interact, selection will work to enhance the
-% similarities, thus drawing the cluster together.
-%
-% I want to know about the promoters motifs that are being used by the
-% orphan genes. However, predicting functional binding sites de novo is
-% extraordinarily difficult. So I will start by searching for transcription
-% factors that are correlated with the particular orphan genes.
-%
-% I will treat each orphan as if it is the sole output of the transcription
-% factor network. Then I will build a correlation network including the
-% transcription factors and the orphan. I assume there are two types of genes:
-% transcription factors and non-transcription factors. In a directed graph, the
-% transcription factors will be internal nodes, and the non-transcription factors
-% are leafs. Thus, non-transcription factors are all unconnected and independent.
-% This allows me to model the transcription factors and a single gene, ignoring
-% all others. By reducing the search space so greatly, I can use more
-% computationally intensive tools than would otherwise be feasible.
-%
-% Of course, my assumption that non-transcription factors have no effect on the
-% transcription of other genes is not entirely true. A protein can, for example,
-% catalyze the production of a metabolite that activates a transcriptional
-% repressor of another gene.
-%
-% Do the orphan genes cluster in their own little networks? If so, are these
-% functional clusters or artifacts of common origin? For example, were they
-% all animated by insertions by the same type of telomere?
-%
-% Orphan problems:
-%
-%     Generally GO is not an option. There are only a few orphans that even have
-%     GO terms.
-%
-%     Generally, evolutionary methods are not available.
-%
-%     There is a few added layer of uncertainty: the orphans may not actually
-%     express a functional (whatever that means) protein product. They may be
-%     noise.
-%
-% Unfortunately, the exprimental structures of RNA-seq data are not encoded in
-% the SRA metadata.
-%
-% \begin{enumerate}
-%   \item Arabidopsis thaliana RNA-seq: take maybe 3 studies. Run through my
-%    RNA-seq pipeline using Kallisto. Process with Sleuth. Include the
-%    bootstrapping procedure.
-%   \item Use snakefile to organize run
-%   \item Compare to interaction network data, using IntAct
-%   \item Compare to promoter motif set similarity. How to do this? Retrieve
-%    putative set of discrete regulatory elements (one exists for
-%    Arabidopsis), Draw edges between genes if there share a common element.
-%    Weights are relative to the number of shared elements. This is not the
-%    only way to do it, but it may work.
-%   \item Compare genomic distance network.
-% \end{enumerate}
